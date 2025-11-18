@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
@@ -29,6 +30,7 @@ export function MediaUploadInput({ label, value, onChange, placeholder, pathPref
   const [isUploading, setIsUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [previewErrored, setPreviewErrored] = useState(false);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const canUpload = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -133,29 +135,57 @@ export function MediaUploadInput({ label, value, onChange, placeholder, pathPref
     handleFiles(event.dataTransfer?.files ?? null);
   };
 
+  useEffect(() => {
+    setPreviewErrored(false);
+  }, [value]);
+
   return (
     <label className="space-y-2 text-xs font-semibold text-slate-400">
       {label}
       <div
-        className="space-y-2"
+        className="space-y-3"
         onDragOver={(event) => canUpload && event.preventDefault()}
         onDrop={handleDrop}
       >
-        <div className="flex gap-2">
-          <Input
-            value={value}
-            onChange={(event) => {
-              resetMessages();
-              onChange(event.target.value);
-            }}
-            placeholder={placeholder}
-            onPaste={handlePaste}
-          />
-          <Button type="button" variant="secondary" onClick={handleButtonClick} disabled={isUploading || !canUpload}>
-            {isUploading ? "Завантаження…" : "Upload"}
-          </Button>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div className="flex-1 space-y-2">
+            <div className="flex gap-2">
+              <Input
+                value={value}
+                onChange={(event) => {
+                  resetMessages();
+                  onChange(event.target.value);
+                }}
+                placeholder={placeholder}
+                onPaste={handlePaste}
+              />
+              <Button type="button" variant="secondary" onClick={handleButtonClick} disabled={isUploading || !canUpload}>
+                {isUploading ? "Завантаження…" : "Upload"}
+              </Button>
+            </div>
+            <p className={`text-[11px] ${helperText.className}`}>{helperText.text}</p>
+          </div>
+          <div className="w-full sm:w-48">
+            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Превʼю</p>
+            <div className="relative mt-2 flex h-32 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 sm:h-36">
+              {value && !previewErrored ? (
+                <Image
+                  src={value}
+                  alt={`${label} preview`}
+                  fill
+                  className="object-cover"
+                  sizes="150px"
+                  unoptimized
+                  onError={() => setPreviewErrored(true)}
+                />
+              ) : (
+                <div className="px-4 text-center text-[11px] text-slate-500">
+                  {value && previewErrored ? "Не вдалося завантажити превʼю." : "Зображення ще не додано."}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-        <p className={`text-[11px] ${helperText.className}`}>{helperText.text}</p>
       </div>
       <input
         ref={fileInputRef}

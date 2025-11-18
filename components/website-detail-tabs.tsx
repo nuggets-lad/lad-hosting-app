@@ -92,6 +92,8 @@ type GlobalFields = {
   image_2: string;
   image_3: string;
   image_4: string;
+  locale: string;
+  favicon: string;
 };
 
 type ButtonCopyState = Record<ButtonTokenId, string>;
@@ -102,6 +104,7 @@ type RegenerationFields = {
   brand_key: string;
   target_site: string;
   style: string;
+  locale: string;
   logo: string;
   banner: string;
   banner_mobile: string;
@@ -109,6 +112,7 @@ type RegenerationFields = {
   image_2: string;
   image_3: string;
   image_4: string;
+  favicon: string;
   login_button_text: string;
   register_button_text: string;
   bonus_button_text: string;
@@ -121,6 +125,7 @@ type RedeployFields = {
   target_site: string;
   style: string;
   pretty_link: string;
+  locale: string;
   logo: string;
   banner: string;
   banner_mobile: string;
@@ -128,6 +133,7 @@ type RedeployFields = {
   image_2: string;
   image_3: string;
   image_4: string;
+  favicon: string;
   login_button_text: string;
   register_button_text: string;
   bonus_button_text: string;
@@ -201,6 +207,8 @@ const buildGlobalFields = (site: WebsiteDetailRecord): GlobalFields => ({
   image_2: site.image_2 ?? "",
   image_3: site.image_3 ?? "",
   image_4: site.image_4 ?? "",
+  locale: site.locale ?? "",
+  favicon: site.favicon ?? "",
 });
 
 const buildButtonCopy = (site: WebsiteDetailRecord): ButtonCopyState => {
@@ -223,6 +231,7 @@ const buildRegenerationFields = (site: WebsiteDetailRecord): RegenerationFields 
   brand_key: site.brand_key ?? site.pretty_link ?? "",
   target_site: site.target_site ?? site.domain ?? "",
   style: site.style ?? "",
+  locale: site.locale ?? "",
   logo: site.logo ?? "",
   banner: site.banner ?? "",
   banner_mobile: site.banner_mobile ?? "",
@@ -230,6 +239,7 @@ const buildRegenerationFields = (site: WebsiteDetailRecord): RegenerationFields 
   image_2: site.image_2 ?? "",
   image_3: site.image_3 ?? "",
   image_4: site.image_4 ?? "",
+  favicon: site.favicon ?? "",
   login_button_text: site.login_button_text ?? extractButtonCopy(site.payload, "login_btn") ?? "",
   register_button_text: site.register_button_text ?? extractButtonCopy(site.payload, "register_btn") ?? "",
   bonus_button_text: site.bonus_button_text ?? extractButtonCopy(site.payload, "bonus_btn") ?? "",
@@ -242,6 +252,7 @@ const buildRedeployFields = (site: WebsiteDetailRecord): RedeployFields => ({
   target_site: site.target_site ?? site.domain ?? "",
   style: site.style ?? "",
   pretty_link: site.pretty_link ?? "",
+  locale: site.locale ?? "",
   logo: site.logo ?? "",
   banner: site.banner ?? "",
   banner_mobile: site.banner_mobile ?? "",
@@ -249,6 +260,7 @@ const buildRedeployFields = (site: WebsiteDetailRecord): RedeployFields => ({
   image_2: site.image_2 ?? "",
   image_3: site.image_3 ?? "",
   image_4: site.image_4 ?? "",
+  favicon: site.favicon ?? "",
   login_button_text: site.login_button_text ?? extractButtonCopy(site.payload, "login_btn") ?? "",
   register_button_text: site.register_button_text ?? extractButtonCopy(site.payload, "register_btn") ?? "",
   bonus_button_text: site.bonus_button_text ?? extractButtonCopy(site.payload, "bonus_btn") ?? "",
@@ -263,6 +275,7 @@ const REDEPLOY_REQUIRED_FIELDS: Array<keyof RedeployFields> = [
 ];
 
 const REDEPLOY_MEDIA_FIELDS: Array<{ key: keyof RedeployFields; label: string }> = [
+  { key: "favicon", label: "Favicon" },
   { key: "logo", label: "Лого" },
   { key: "banner", label: "Банер" },
   { key: "banner_mobile", label: "Банер Мобільний" },
@@ -574,6 +587,7 @@ export function WebsiteDetailTabs({
           brand_key: trimOrNull(getRegenerationField("brand_key")),
           target_site: trimOrNull(getRegenerationField("target_site")),
           style: trimOrNull(getRegenerationField("style")),
+          locale: trimOrNull(getRegenerationField("locale")),
           logo: trimOrNull(getRegenerationField("logo")),
           banner: trimOrNull(getRegenerationField("banner")),
           banner_mobile: trimOrNull(getRegenerationField("banner_mobile")),
@@ -581,6 +595,7 @@ export function WebsiteDetailTabs({
           image_2: trimOrNull(getRegenerationField("image_2")),
           image_3: trimOrNull(getRegenerationField("image_3")),
           image_4: trimOrNull(getRegenerationField("image_4")),
+          favicon: trimOrNull(getRegenerationField("favicon")),
           login_button_text: trimOrNull(getRegenerationField("login_button_text")),
           register_button_text: trimOrNull(getRegenerationField("register_button_text")),
           bonus_button_text: trimOrNull(getRegenerationField("bonus_button_text")),
@@ -620,6 +635,8 @@ export function WebsiteDetailTabs({
           image_2: globalFields.image_2 || null,
           image_3: globalFields.image_3 || null,
           image_4: globalFields.image_4 || null,
+          favicon: globalFields.favicon || null,
+          locale: globalFields.locale || null,
           login_button_text: buttonCopy.login_btn || null,
           register_button_text: buttonCopy.register_btn || null,
           bonus_button_text: buttonCopy.bonus_btn || null,
@@ -886,6 +903,10 @@ export function WebsiteDetailTabs({
           <Input value={globalFields.domain} onChange={(event) => handleGlobalFieldChange("domain", event.target.value)} placeholder="brand.com" />
         </label>
         <label className="space-y-2 text-xs font-semibold text-slate-400">
+          Локаль інтерфейсу
+          <Input value={globalFields.locale} onChange={(event) => handleGlobalFieldChange("locale", event.target.value)} placeholder="uk-UA" />
+        </label>
+        <label className="space-y-2 text-xs font-semibold text-slate-400">
           Tracking ref
           <Textarea value={globalFields.ref} onChange={(event) => handleGlobalFieldChange("ref", event.target.value)} rows={2} placeholder="https://partners.brand.com/?ref=..." />
         </label>
@@ -893,6 +914,13 @@ export function WebsiteDetailTabs({
       <div className="space-y-3">
         <FieldLabel>Медіа</FieldLabel>
         <div className="grid gap-4 md:grid-cols-2">
+          <MediaUploadInput
+            label="Favicon"
+            value={globalFields.favicon}
+            onChange={(val) => handleGlobalFieldChange("favicon", val)}
+            placeholder="https://cdn.brand.com/favicon.png"
+            pathPrefix={`${site.uuid}-favicon`}
+          />
           <MediaUploadInput
             label="Логотип URL"
             value={globalFields.logo}
@@ -1029,6 +1057,14 @@ export function WebsiteDetailTabs({
               placeholder="https://bizzo-casino-pl.com"
             />
           </label>
+          <label className="space-y-2 text-xs font-semibold text-slate-400">
+            Локаль інтерфейсу
+            <Input
+              value={getRegenerationField("locale")}
+              onChange={(event) => handleRegenerationFieldChange("locale", event.target.value)}
+              placeholder={globalFields.locale || "uk-UA"}
+            />
+          </label>
         </div>
         <label className="space-y-2 text-xs font-semibold text-slate-400">
           Стиль
@@ -1042,6 +1078,13 @@ export function WebsiteDetailTabs({
         <div className="space-y-3">
           <FieldLabel>Медіа</FieldLabel>
           <div className="grid gap-4 md:grid-cols-2">
+            <MediaUploadInput
+              label="Favicon"
+              value={getRegenerationField("favicon")}
+              onChange={(val) => handleRegenerationFieldChange("favicon", val)}
+              placeholder={globalFields.favicon || "https://.../favicon.png"}
+              pathPrefix={`${site.uuid}-favicon`}
+            />
             <MediaUploadInput
               label="Лого"
               value={getRegenerationField("logo")}
@@ -1190,6 +1233,14 @@ export function WebsiteDetailTabs({
                 value={getRedeployField("pretty_link")}
                 onChange={(event) => handleRedeployFieldChange("pretty_link", event.target.value)}
                 placeholder="https://partners.brand.com/?ref=123"
+              />
+            </label>
+            <label className="space-y-2 text-xs font-semibold text-slate-400">
+              Локаль інтерфейсу
+              <Input
+                value={getRedeployField("locale")}
+                onChange={(event) => handleRedeployFieldChange("locale", event.target.value)}
+                placeholder={globalFields.locale || "uk-UA"}
               />
             </label>
           </div>

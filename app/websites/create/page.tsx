@@ -16,6 +16,7 @@ type CreateWebsiteFields = {
   brand_key: string;
   target_site: string;
   style: string;
+  locale: string;
   logo: string;
   banner: string;
   banner_mobile: string;
@@ -23,6 +24,7 @@ type CreateWebsiteFields = {
   image_2: string;
   image_3: string;
   image_4: string;
+  favicon: string;
   login_button_text: string;
   register_button_text: string;
   bonus_button_text: string;
@@ -36,6 +38,7 @@ const INITIAL_VALUES: CreateWebsiteFields = {
   brand_key: "",
   target_site: "",
   style: "",
+  locale: "",
   logo: "",
   banner: "",
   banner_mobile: "",
@@ -43,6 +46,7 @@ const INITIAL_VALUES: CreateWebsiteFields = {
   image_2: "",
   image_3: "",
   image_4: "",
+  favicon: "",
   login_button_text: "",
   register_button_text: "",
   bonus_button_text: "",
@@ -59,6 +63,7 @@ const REQUIRED_FIELDS: Array<keyof CreateWebsiteFields> = [
 ];
 
 const MEDIA_FIELDS: Array<{ key: keyof CreateWebsiteFields; label: string; placeholder: string }> = [
+  { key: "favicon", label: "Favicon", placeholder: "https://cdn.site/favicon.png" },
   { key: "logo", label: "Лого", placeholder: "https://cdn.site/logo.png" },
   { key: "banner", label: "Банер", placeholder: "https://cdn.site/banner.jpg" },
   { key: "banner_mobile", label: "Банер Мобільний", placeholder: "https://cdn.site/banner-mobile.jpg" },
@@ -177,6 +182,10 @@ export default function CreateWebsitePage() {
               <label className="space-y-2 text-xs font-semibold text-slate-400">
                 Реферальне посилання (pretty_link)
                 <Input value={formValues.pretty_link} onChange={(event) => handleChange("pretty_link", event.target.value)} placeholder="https://partners.brand.com/?ref=123" />
+              </label>
+              <label className="space-y-2 text-xs font-semibold text-slate-400">
+                Локаль інтерфейсу
+                <Input value={formValues.locale} onChange={(event) => handleChange("locale", event.target.value)} placeholder="uk-UA" />
               </label>
             </div>
 

@@ -22,6 +22,8 @@ export type WebsiteDetailRecord = {
   image_2: string | null;
   image_3: string | null;
   image_4: string | null;
+  favicon: string | null;
+  locale: string | null;
   login_button_text: string | null;
   register_button_text: string | null;
   bonus_button_text: string | null;
