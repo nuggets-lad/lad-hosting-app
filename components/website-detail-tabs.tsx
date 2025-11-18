@@ -528,10 +528,14 @@ export function WebsiteDetailTabs({
         if (!site.app_uuid) {
           throw new Error("Цей сайт не має app_uuid. Зверніться до девелопера.");
         }
+        const currentDomain = globalFields.domain.trim() ? globalFields.domain.trim() : site.domain ?? null;
         const response = await fetch(webhookUrl, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ app_uuid: site.app_uuid }),
+          body: JSON.stringify({
+            app_uuid: site.app_uuid,
+            domain: currentDomain,
+          }),
         });
         if (!response.ok) {
           const errorText = await response.text();
