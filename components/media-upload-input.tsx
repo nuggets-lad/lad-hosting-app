@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { MediaGalleryModal } from "@/components/media-gallery-modal";
 
 const STORAGE_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? "uploads";
 const STORAGE_FOLDER = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_FOLDER ?? "uploads";
@@ -15,6 +16,7 @@ type MediaUploadInputProps = {
   onChange: (value: string) => void;
   placeholder?: string;
   pathPrefix?: string;
+  websiteUuid?: string;
 };
 
 const generateFilePath = (prefix: string, originalName: string) => {
@@ -25,178 +27,50 @@ const generateFilePath = (prefix: string, originalName: string) => {
   return `${folder}${cleanedPrefix}-${Date.now()}-${id}.${extension}`;
 };
 
-export function MediaUploadInput({ label, value, onChange, placeholder, pathPrefix = "media" }: MediaUploadInputProps) {
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export function MediaUploadInput({ label, value, onChange, placeholder, pathPrefix = "media", websiteUuid }: MediaUploadInputProps) {
   const [previewErrored, setPreviewErrored] = useState(false);
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-
-  const canUpload = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-
-  const helperText = useMemo(() => {
-    if (errorMessage) {
-      return { text: errorMessage, className: "text-red-400" };
-    }
-    if (statusMessage) {
-      return { text: statusMessage, className: "text-emerald-300" };
-    }
-    if (!canUpload) {
-      return {
-        text: "Завантаження недоступне: додайте NEXT_PUBLIC_SUPABASE_URL/ANON_KEY.",
-        className: "text-amber-200",
-      };
-    }
-    return {
-      text: "Ctrl+V або перетягніть зображення, щоб завантажити на Supabase.",
-      className: "text-slate-500",
-    };
-  }, [canUpload, errorMessage, statusMessage]);
-
-  const resetMessages = () => {
-    setStatusMessage(null);
-    setErrorMessage(null);
-  };
-
-  const uploadFile = useCallback(
-    async (file: File) => {
-      if (!canUpload) {
-        return;
-      }
-      setIsUploading(true);
-      resetMessages();
-      try {
-        const path = generateFilePath(pathPrefix, file.name || "image.png");
-        const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, {
-          upsert: false,
-          cacheControl: "3600",
-        });
-        if (uploadError) {
-          throw uploadError;
-        }
-        const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path);
-        if (!data?.publicUrl) {
-          throw new Error("Не вдалося отримати публічний URL.");
-        }
-        onChange(data.publicUrl);
-        setStatusMessage("Зображення завантажене.");
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Не вдалося завантажити файл.";
-        setErrorMessage(message);
-      } finally {
-        setIsUploading(false);
-      }
-    },
-    [canUpload, onChange, pathPrefix, supabase]
-  );
-
-  const handleFiles = useCallback(
-    (files: FileList | null) => {
-      const file = files && files[0];
-      if (!file) {
-        return;
-      }
-      uploadFile(file);
-    },
-    [uploadFile]
-  );
-
-  const handleButtonClick = () => {
-    if (!canUpload) {
-      return;
-    }
-    fileInputRef.current?.click();
-  };
-
-  const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
-    if (!canUpload) {
-      return;
-    }
-    const items = event.clipboardData?.items;
-    if (!items) {
-      return;
-    }
-    const fileItem = Array.from(items).find((item) => item.type.startsWith("image"));
-    if (fileItem) {
-      event.preventDefault();
-      const file = fileItem.getAsFile();
-      if (file) {
-        uploadFile(file);
-      }
-    }
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!canUpload) {
-      return;
-    }
-    event.preventDefault();
-    handleFiles(event.dataTransfer?.files ?? null);
-  };
 
   useEffect(() => {
     setPreviewErrored(false);
   }, [value]);
 
   return (
-    <label className="space-y-2 text-xs font-semibold text-slate-400">
-      {label}
-      <div
-        className="space-y-3"
-        onDragOver={(event) => canUpload && event.preventDefault()}
-        onDrop={handleDrop}
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-          <div className="flex-1 space-y-2">
-            <div className="flex gap-2">
-              <Input
-                value={value}
-                onChange={(event) => {
-                  resetMessages();
-                  onChange(event.target.value);
-                }}
-                placeholder={placeholder}
-                onPaste={handlePaste}
-              />
-              <Button type="button" variant="secondary" onClick={handleButtonClick} disabled={isUploading || !canUpload}>
-                {isUploading ? "Завантаження…" : "Upload"}
-              </Button>
-            </div>
-            <p className={`text-[11px] ${helperText.className}`}>{helperText.text}</p>
-          </div>
-          <div className="w-full sm:w-48">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">Превʼю</p>
-            <div className="relative mt-2 flex h-32 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 sm:h-36">
-              {value && !previewErrored ? (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-slate-400">{label}</p>
+      <MediaGalleryModal 
+        onSelect={onChange} 
+        websiteUuid={websiteUuid}
+        pathPrefix={pathPrefix}
+        trigger={
+          <div className="group relative flex h-32 w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 transition hover:border-white/20 hover:bg-slate-900/80 sm:h-36">
+            {value && !previewErrored ? (
+              <>
                 <Image
                   src={value}
                   alt={`${label} preview`}
                   fill
-                  className="object-cover"
-                  sizes="150px"
+                  className="object-contain p-2 transition group-hover:scale-105"
+                  sizes="(max-width: 768px) 100vw, 300px"
                   unoptimized
                   onError={() => setPreviewErrored(true)}
                 />
-              ) : (
-                <div className="px-4 text-center text-[11px] text-slate-500">
-                  {value && previewErrored ? "Не вдалося завантажити превʼю." : "Зображення ще не додано."}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                  <p className="text-xs font-medium text-white">Змінити зображення</p>
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-2 p-4 text-center text-slate-500 transition group-hover:text-slate-400">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                  <circle cx="9" cy="9" r="2" />
+                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                </svg>
+                <span className="text-[11px]">Оберіть або завантажте</span>
+              </div>
+            )}
           </div>
-        </div>
-      </div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(event) => {
-          handleFiles(event.target.files);
-          event.target.value = "";
-        }}
+        }
       />
-    </label>
+    </div>
   );
 }

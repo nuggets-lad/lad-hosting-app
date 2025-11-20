@@ -914,56 +914,56 @@ export function WebsiteDetailTabs({
       <div className="space-y-3">
         <FieldLabel>Медіа</FieldLabel>
         <div className="grid gap-4 md:grid-cols-2">
-          <MediaUploadInput
+          <MediaUploadInput websiteUuid={site.uuid}
             label="Favicon"
             value={globalFields.favicon}
             onChange={(val) => handleGlobalFieldChange("favicon", val)}
             placeholder="https://cdn.brand.com/favicon.png"
             pathPrefix={`${site.uuid}-favicon`}
           />
-          <MediaUploadInput
+          <MediaUploadInput websiteUuid={site.uuid}
             label="Логотип URL"
             value={globalFields.logo}
             onChange={(val) => handleGlobalFieldChange("logo", val)}
             placeholder="https://cdn.brand.com/logo.svg"
             pathPrefix={`${site.uuid}-logo`}
           />
-          <MediaUploadInput
+          <MediaUploadInput websiteUuid={site.uuid}
             label="Банер Hero"
             value={globalFields.banner}
             onChange={(val) => handleGlobalFieldChange("banner", val)}
             placeholder="https://cdn.brand.com/hero.png"
             pathPrefix={`${site.uuid}-banner`}
           />
-          <MediaUploadInput
+          <MediaUploadInput websiteUuid={site.uuid}
             label="Банер Hero (Mobile)"
             value={globalFields.banner_mobile}
             onChange={(val) => handleGlobalFieldChange("banner_mobile", val)}
             placeholder="https://cdn.brand.com/hero-mobile.png"
             pathPrefix={`${site.uuid}-banner-mobile`}
           />
-          <MediaUploadInput
+          <MediaUploadInput websiteUuid={site.uuid}
             label="Зображення 1"
             value={globalFields.image_1}
             onChange={(val) => handleGlobalFieldChange("image_1", val)}
             placeholder="https://cdn.brand.com/image1.jpg"
             pathPrefix={`${site.uuid}-image-1`}
           />
-          <MediaUploadInput
+          <MediaUploadInput websiteUuid={site.uuid}
             label="Зображення 2"
             value={globalFields.image_2}
             onChange={(val) => handleGlobalFieldChange("image_2", val)}
             placeholder="https://cdn.brand.com/image2.jpg"
             pathPrefix={`${site.uuid}-image-2`}
           />
-          <MediaUploadInput
+          <MediaUploadInput websiteUuid={site.uuid}
             label="Зображення 3"
             value={globalFields.image_3}
             onChange={(val) => handleGlobalFieldChange("image_3", val)}
             placeholder="https://cdn.brand.com/image3.jpg"
             pathPrefix={`${site.uuid}-image-3`}
           />
-          <MediaUploadInput
+          <MediaUploadInput websiteUuid={site.uuid}
             label="Зображення 4"
             value={globalFields.image_4}
             onChange={(val) => handleGlobalFieldChange("image_4", val)}
@@ -1078,56 +1078,56 @@ export function WebsiteDetailTabs({
         <div className="space-y-3">
           <FieldLabel>Медіа</FieldLabel>
           <div className="grid gap-4 md:grid-cols-2">
-            <MediaUploadInput
+            <MediaUploadInput websiteUuid={site.uuid}
               label="Favicon"
               value={getRegenerationField("favicon")}
               onChange={(val) => handleRegenerationFieldChange("favicon", val)}
               placeholder={globalFields.favicon || "https://.../favicon.png"}
               pathPrefix={`${site.uuid}-favicon`}
             />
-            <MediaUploadInput
+            <MediaUploadInput websiteUuid={site.uuid}
               label="Лого"
               value={getRegenerationField("logo")}
               onChange={(val) => handleRegenerationFieldChange("logo", val)}
               placeholder={globalFields.logo || "https://.../logo.png"}
               pathPrefix={`${site.uuid}-logo`}
             />
-            <MediaUploadInput
+            <MediaUploadInput websiteUuid={site.uuid}
               label="Банер"
               value={getRegenerationField("banner")}
               onChange={(val) => handleRegenerationFieldChange("banner", val)}
               placeholder={globalFields.banner || "https://.../banner.jpg"}
               pathPrefix={`${site.uuid}-banner`}
             />
-            <MediaUploadInput
+            <MediaUploadInput websiteUuid={site.uuid}
               label="Банер мобільний"
               value={getRegenerationField("banner_mobile")}
               onChange={(val) => handleRegenerationFieldChange("banner_mobile", val)}
               placeholder={globalFields.banner_mobile || "https://.../banner-mobile.jpg"}
               pathPrefix={`${site.uuid}-banner-mobile`}
             />
-            <MediaUploadInput
+            <MediaUploadInput websiteUuid={site.uuid}
               label="Зображення 1"
               value={getRegenerationField("image_1")}
               onChange={(val) => handleRegenerationFieldChange("image_1", val)}
               placeholder={globalFields.image_1 || "https://.../image1.jpg"}
               pathPrefix={`${site.uuid}-image-1`}
             />
-            <MediaUploadInput
+            <MediaUploadInput websiteUuid={site.uuid}
               label="Зображення 2"
               value={getRegenerationField("image_2")}
               onChange={(val) => handleRegenerationFieldChange("image_2", val)}
               placeholder={globalFields.image_2 || "https://.../image2.jpg"}
               pathPrefix={`${site.uuid}-image-2`}
             />
-            <MediaUploadInput
+            <MediaUploadInput websiteUuid={site.uuid}
               label="Зображення 3"
               value={getRegenerationField("image_3")}
               onChange={(val) => handleRegenerationFieldChange("image_3", val)}
               placeholder={globalFields.image_3 || "https://.../image3.jpg"}
               pathPrefix={`${site.uuid}-image-3`}
             />
-            <MediaUploadInput
+            <MediaUploadInput websiteUuid={site.uuid}
               label="Зображення 4"
               value={getRegenerationField("image_4")}
               onChange={(val) => handleRegenerationFieldChange("image_4", val)}
@@ -1259,7 +1259,7 @@ export function WebsiteDetailTabs({
             <FieldLabel>Медіа</FieldLabel>
             <div className="grid gap-4 md:grid-cols-2">
               {REDEPLOY_MEDIA_FIELDS.map(({ key, label }) => (
-                <MediaUploadInput
+                <MediaUploadInput websiteUuid={site.uuid}
                   key={key}
                   label={label}
                   value={getRedeployField(key)}
