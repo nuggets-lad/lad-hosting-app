@@ -94,6 +94,8 @@ type GlobalFields = {
   image_4: string;
   locale: string;
   favicon: string;
+  global_code_after_head_open: string;
+  global_code_after_body_open: string;
 };
 
 type ButtonCopyState = Record<ButtonTokenId, string>;
@@ -209,6 +211,8 @@ const buildGlobalFields = (site: WebsiteDetailRecord): GlobalFields => ({
   image_4: site.image_4 ?? "",
   locale: site.locale ?? "",
   favicon: site.favicon ?? "",
+  global_code_after_head_open: site.global_code_after_head_open ?? "",
+  global_code_after_body_open: site.global_code_after_body_open ?? "",
 });
 
 const buildButtonCopy = (site: WebsiteDetailRecord): ButtonCopyState => {
@@ -637,6 +641,8 @@ export function WebsiteDetailTabs({
           image_4: globalFields.image_4 || null,
           favicon: globalFields.favicon || null,
           locale: globalFields.locale || null,
+          global_code_after_head_open: globalFields.global_code_after_head_open || null,
+          global_code_after_body_open: globalFields.global_code_after_body_open || null,
           login_button_text: buttonCopy.login_btn || null,
           register_button_text: buttonCopy.register_btn || null,
           bonus_button_text: buttonCopy.bonus_btn || null,
@@ -908,8 +914,33 @@ export function WebsiteDetailTabs({
         </label>
         <label className="space-y-2 text-xs font-semibold text-slate-400">
           Tracking ref
-          <Textarea value={globalFields.ref} onChange={(event) => handleGlobalFieldChange("ref", event.target.value)} rows={2} placeholder="https://partners.brand.com/?ref=..." />
+          <Input value={globalFields.ref} onChange={(event) => handleGlobalFieldChange("ref", event.target.value)} placeholder="https://partners.brand.com/?ref=..." />
         </label>
+      </div>
+      <div className="space-y-3">
+        <FieldLabel>Global Code Injection</FieldLabel>
+        <div className="grid gap-4 md:grid-cols-1">
+          <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
+            Code after &lt;head&gt; open
+            <Textarea 
+              value={globalFields.global_code_after_head_open} 
+              onChange={(event) => handleGlobalFieldChange("global_code_after_head_open", event.target.value)} 
+              rows={4} 
+              placeholder="<script>...</script>" 
+              className="min-h-[100px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
+            Code after &lt;body&gt; open
+            <Textarea 
+              value={globalFields.global_code_after_body_open} 
+              onChange={(event) => handleGlobalFieldChange("global_code_after_body_open", event.target.value)} 
+              rows={4} 
+              placeholder="<noscript>...</noscript>" 
+              className="min-h-[100px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+            />
+          </label>
+        </div>
       </div>
       <div className="space-y-3">
         <FieldLabel>Медіа</FieldLabel>

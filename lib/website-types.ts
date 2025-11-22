@@ -32,6 +32,8 @@ export type WebsiteDetailRecord = {
   brand_key: string | null;
   target_site: string | null;
   style: string | null;
+  global_code_after_head_open: string | null;
+  global_code_after_body_open: string | null;
 };
 
 export type WebsiteHistoryField = {
