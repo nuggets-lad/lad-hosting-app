@@ -37,9 +37,11 @@ BEGIN
     INSERT INTO websites (
       uuid, domain, project_uuid, server_uuid, environment_uuid, app_uuid,
       payload, status, ref, brand, logo, banner, banner_mobile,
-      image_1, image_2, image_3, image_4,
+      image_1, image_2, image_3, image_4, favicon,
       admin_slug, admin_user, admin_password, api_key, pretty_link,
       login_button_text, register_button_text, bonus_button_text,
+      publisher, brand_full, brand_key, target_site, style,
+      locale,
       global_code_after_head_open, global_code_after_body_open
     )
     VALUES (
@@ -60,6 +62,7 @@ BEGIN
       NULLIF(p_data->>'image_2', ''),
       NULLIF(p_data->>'image_3', ''),
       NULLIF(p_data->>'image_4', ''),
+      NULLIF(p_data->>'favicon', ''),
       NULLIF(p_data->>'admin_slug', ''),
       NULLIF(p_data->>'admin_user', ''),
       NULLIF(p_data->>'admin_password', ''),
@@ -68,6 +71,12 @@ BEGIN
       NULLIF(p_data->>'login_button_text', ''),
       NULLIF(p_data->>'register_button_text', ''),
       NULLIF(p_data->>'bonus_button_text', ''),
+      NULLIF(p_data->>'publisher', ''),
+      NULLIF(p_data->>'brand_full', ''),
+      NULLIF(p_data->>'brand_key', ''),
+      NULLIF(p_data->>'target_site', ''),
+      NULLIF(p_data->>'style', ''),
+      NULLIF(p_data->>'locale', ''),
       NULLIF(p_data->>'global_code_after_head_open', ''),
       NULLIF(p_data->>'global_code_after_body_open', '')
     )
@@ -135,6 +144,10 @@ BEGIN
         CASE WHEN p_data ? 'image_4' AND p_data->>'image_4' IS NOT NULL THEN NULLIF(p_data->>'image_4', '') END,
         image_4
       ),
+      favicon = COALESCE(
+        CASE WHEN p_data ? 'favicon' AND p_data->>'favicon' IS NOT NULL THEN NULLIF(p_data->>'favicon', '') END,
+        favicon
+      ),
       admin_slug = COALESCE(
         CASE WHEN p_data ? 'admin_slug' AND p_data->>'admin_slug' IS NOT NULL THEN NULLIF(p_data->>'admin_slug', '') END,
         admin_slug
@@ -166,6 +179,30 @@ BEGIN
       bonus_button_text = COALESCE(
         CASE WHEN p_data ? 'bonus_button_text' AND p_data->>'bonus_button_text' IS NOT NULL THEN NULLIF(p_data->>'bonus_button_text', '') END,
         bonus_button_text
+      ),
+      publisher = COALESCE(
+        CASE WHEN p_data ? 'publisher' AND p_data->>'publisher' IS NOT NULL THEN NULLIF(p_data->>'publisher', '') END,
+        publisher
+      ),
+      brand_full = COALESCE(
+        CASE WHEN p_data ? 'brand_full' AND p_data->>'brand_full' IS NOT NULL THEN NULLIF(p_data->>'brand_full', '') END,
+        brand_full
+      ),
+      brand_key = COALESCE(
+        CASE WHEN p_data ? 'brand_key' AND p_data->>'brand_key' IS NOT NULL THEN NULLIF(p_data->>'brand_key', '') END,
+        brand_key
+      ),
+      target_site = COALESCE(
+        CASE WHEN p_data ? 'target_site' AND p_data->>'target_site' IS NOT NULL THEN NULLIF(p_data->>'target_site', '') END,
+        target_site
+      ),
+      style = COALESCE(
+        CASE WHEN p_data ? 'style' AND p_data->>'style' IS NOT NULL THEN NULLIF(p_data->>'style', '') END,
+        style
+      ),
+      locale = COALESCE(
+        CASE WHEN p_data ? 'locale' AND p_data->>'locale' IS NOT NULL THEN NULLIF(p_data->>'locale', '') END,
+        locale
       ),
       global_code_after_head_open = COALESCE(
         CASE WHEN p_data ? 'global_code_after_head_open' AND p_data->>'global_code_after_head_open' IS NOT NULL THEN NULLIF(p_data->>'global_code_after_head_open', '') END,

@@ -44,6 +44,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       login_button_text: trimOrNull(payload.login_button_text),
       register_button_text: trimOrNull(payload.register_button_text),
       bonus_button_text: trimOrNull(payload.bonus_button_text),
+      locale: trimOrNull(payload.locale),
+      favicon: trimOrNull(payload.favicon),
+      global_code_after_head_open: trimOrNull(payload.global_code_after_head_open),
+      global_code_after_body_open: trimOrNull(payload.global_code_after_body_open),
     };
 
     const { error } = await supabase.from("websites").update(updateFields).eq("uuid", uuid);
