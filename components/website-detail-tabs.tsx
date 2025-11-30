@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { PayloadPreview } from "@/components/payload-preview";
 import { MediaUploadInput } from "@/components/media-upload-input";
 import { WebsiteDetailRecord, WebsiteHistoryEntry } from "@/lib/website-types";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { Loader2 } from "lucide-react";
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleString("en-US", { timeZone: "UTC", hour12: false });
@@ -318,6 +320,20 @@ export function WebsiteDetailTabs({
   const [isDisabling, setIsDisabling] = useState(false);
   const [disableMessage, setDisableMessage] = useState<string | null>(null);
   const [disableError, setDisableError] = useState<string | null>(null);
+  
+  const [processingState, setProcessingState] = useState<{
+    isOpen: boolean;
+    step: number;
+    message: string;
+    status: "idle" | "processing" | "success" | "error";
+    error?: string;
+  }>({
+    isOpen: false,
+    step: 0,
+    message: "",
+    status: "idle",
+  });
+
   const isSiteframeTab = activeTab === "edit-siteframe-raw" || activeTab === "edit-siteframe-structured";
   const siteframeMode: "raw" | "structured" | null = activeTab === "edit-siteframe-raw" ? "raw" : activeTab === "edit-siteframe-structured" ? "structured" : null;
 
@@ -573,12 +589,7 @@ export function WebsiteDetailTabs({
       setIsRegenerating(true);
       setRegenerateMessage(null);
       setRegenerateError(null);
-    } else {
-      setIsSaving(true);
-      resetStatus();
-    }
-    try {
-      if (target === "regenerate") {
+      try {
         const domainValue = globalFields.domain.trim() ? globalFields.domain.trim() : site.domain ?? "";
         const trimOrNull = (value: string) => {
           const trimmed = value.trim();
@@ -624,61 +635,143 @@ export function WebsiteDetailTabs({
         }
         setRegenerateMessage("Запит на перегенерацію надіслано.");
         await persistRegenerationSnapshot(regenerationPayload);
-      } else {
-        const domainValue = globalFields.domain.trim() ? globalFields.domain : site.domain ?? "";
-        const body = {
-          code: target === "siteframe" ? siteframeValue : null,
-          domain: domainValue || null,
-          api_key: site.api_key ?? null,
-          brand: globalFields.brand || null,
-          pretty_link: globalFields.pretty_link || null,
-          logo: globalFields.logo || null,
-          banner: globalFields.banner || null,
-          banner_mobile: globalFields.banner_mobile || null,
-          image_1: globalFields.image_1 || null,
-          image_2: globalFields.image_2 || null,
-          image_3: globalFields.image_3 || null,
-          image_4: globalFields.image_4 || null,
-          favicon: globalFields.favicon || null,
-          locale: globalFields.locale || null,
-          global_code_after_head_open: globalFields.global_code_after_head_open || null,
-          global_code_after_body_open: globalFields.global_code_after_body_open || null,
-          login_button_text: buttonCopy.login_btn || null,
-          register_button_text: buttonCopy.register_btn || null,
-          bonus_button_text: buttonCopy.bonus_btn || null,
-          target,
-          website_uuid: site.uuid,
-        } as const;
-        const response = await fetch(webhookUrl, {
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Сталася невідома помилка.";
+        setRegenerateError(message);
+      } finally {
+        setIsRegenerating(false);
+        setConfirmState({ open: false, target: null });
+      }
+    } else {
+      // New logic for global and siteframe updates
+      setConfirmState({ open: false, target: null });
+      setProcessingState({
+        isOpen: true,
+        step: 1,
+        message: "Ініціалізація оновлення...",
+        status: "processing",
+      });
+
+      try {
+        const supabase = createSupabaseBrowserClient();
+        const domain = globalFields.domain.trim() || site.domain;
+        
+        if (!domain) {
+          throw new Error("Домен не вказано.");
+        }
+
+        // Step 1: Set status to updating
+        setProcessingState(prev => ({ ...prev, step: 1, message: "Встановлення статусу 'updating'..." }));
+        const { error: statusError } = await supabase
+          .from("websites")
+          .update({ status: "updating" })
+          .eq("uuid", site.uuid);
+        
+        if (statusError) throw new Error(`Помилка оновлення статусу: ${statusError.message}`);
+
+        // Step 2: Save changes to DB
+        setProcessingState(prev => ({ ...prev, step: 2, message: "Збереження змін в базу даних..." }));
+        
+        const updateData: any = {};
+        if (target === "global") {
+          updateData.brand = globalFields.brand;
+          updateData.pretty_link = globalFields.pretty_link;
+          updateData.logo = globalFields.logo;
+          updateData.banner = globalFields.banner;
+          updateData.banner_mobile = globalFields.banner_mobile;
+          updateData.image_1 = globalFields.image_1;
+          updateData.image_2 = globalFields.image_2;
+          updateData.image_3 = globalFields.image_3;
+          updateData.image_4 = globalFields.image_4;
+          updateData.favicon = globalFields.favicon;
+          updateData.locale = globalFields.locale;
+          updateData.login_button_text = buttonCopy.login_btn;
+          updateData.register_button_text = buttonCopy.register_btn;
+          updateData.bonus_button_text = buttonCopy.bonus_btn;
+          updateData.global_code_after_head_open = globalFields.global_code_after_head_open;
+          updateData.global_code_after_body_open = globalFields.global_code_after_body_open;
+          if (globalFields.domain.trim()) updateData.domain = globalFields.domain.trim();
+        } else if (target === "siteframe") {
+          updateData.payload = siteframeValue;
+        }
+
+        const { error: saveError } = await supabase
+          .from("websites")
+          .update(updateData)
+          .eq("uuid", site.uuid);
+
+        if (saveError) throw new Error(`Помилка збереження даних: ${saveError.message}`);
+
+        // Step 3: Send request to website
+        setProcessingState(prev => ({ ...prev, step: 3, message: "Відправка запиту на сайт..." }));
+        
+        const syncUrl = `https://${domain}/wp-json/siteframe/v1/sync`;
+        const apiKey = site.api_key;
+
+        if (!apiKey) throw new Error("API Key відсутній.");
+
+        const currentGlobal = {
+          brand: globalFields.brand || site.brand,
+          ref: site.ref,
+          logo: globalFields.logo || site.logo,
+          banner: globalFields.banner || site.banner,
+          banner_mobile: globalFields.banner_mobile || site.banner_mobile,
+          login_button_text: buttonCopy.login_btn || site.login_button_text,
+          locale: globalFields.locale || site.locale,
+          favicon: globalFields.favicon || site.favicon,
+          register_button_text: buttonCopy.register_btn || site.register_button_text,
+          bonus_button_text: buttonCopy.bonus_btn || site.bonus_button_text,
+          image_1: globalFields.image_1 || site.image_1,
+          image_2: globalFields.image_2 || site.image_2,
+          image_3: globalFields.image_3 || site.image_3,
+          image_4: globalFields.image_4 || site.image_4,
+          global_code_after_head_open: globalFields.global_code_after_head_open || site.global_code_after_head_open,
+          global_code_after_body_open: globalFields.global_code_after_body_open || site.global_code_after_body_open,
+        };
+
+        const payloadBody = {
+          draft_non_imported: true,
+          default_status: "publish",
+          pretty_link: globalFields.pretty_link || site.pretty_link,
+          payload: target === "siteframe" ? siteframeValue : (site.payload || ""),
+          global_options: currentGlobal
+        };
+
+        const response = await fetch(syncUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify(payloadBody)
         });
+
         if (!response.ok) {
           const errorText = await response.text();
-          throw new Error(errorText || "Не вдалося надіслати дані.");
+          throw new Error(`Помилка синхронізації: ${response.status} ${errorText}`);
         }
-        setSaveMessage(target === "global" ? "Глобальні поля надіслано." : "Siteframe payload надіслано.");
-        if (target === "global") {
-          setGlobalDirty(false);
-        } else {
-          setSiteframeDirty(false);
-        }
+
+        // Step 4: Set status to active
+        setProcessingState(prev => ({ ...prev, step: 4, message: "Завершення..." }));
+        const { error: finalStatusError } = await supabase
+          .from("websites")
+          .update({ status: "active" })
+          .eq("uuid", site.uuid);
+
+        if (finalStatusError) throw new Error(`Помилка встановлення статусу active: ${finalStatusError.message}`);
+
+        setProcessingState(prev => ({ ...prev, status: "success", message: "Оновлення успішно завершено!" }));
+        
+        if (target === "global") setGlobalDirty(false);
+        else setSiteframeDirty(false);
+
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        setProcessingState(prev => ({ ...prev, status: "error", error: message, message: "Сталася помилка" }));
+        
+        const supabase = createSupabaseBrowserClient();
+        await supabase.from("websites").update({ status: "error" }).eq("uuid", site.uuid);
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Сталася невідома помилка.";
-      if (target === "regenerate") {
-        setRegenerateError(message);
-      } else {
-        setSaveError(message);
-      }
-    } finally {
-      if (target === "regenerate") {
-        setIsRegenerating(false);
-      } else {
-        setIsSaving(false);
-      }
-      setConfirmState({ open: false, target: null });
     }
   };
 
@@ -1555,6 +1648,51 @@ export function WebsiteDetailTabs({
               >
                 {getConfirmPrimaryLabel(confirmState.target)}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {processingState.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="w-full max-w-md space-y-4 rounded-3xl border border-white/15 bg-slate-900/95 p-6 shadow-xl">
+            <div>
+              <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Оновлення</p>
+              <h3 className="text-lg font-semibold text-white">
+                {processingState.status === "success" ? "Успішно!" : processingState.status === "error" ? "Помилка" : "Оновлення сайту"}
+              </h3>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                {processingState.status === "processing" && <Loader2 className="h-5 w-5 animate-spin text-amber-500" />}
+                <p className="text-sm text-slate-300">{processingState.message}</p>
+              </div>
+              
+              {processingState.status === "processing" && (
+                <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                  <div 
+                    className="h-full bg-amber-500 transition-all duration-500"
+                    style={{ width: `${(processingState.step / 4) * 100}%` }}
+                  />
+                </div>
+              )}
+
+              {processingState.error && (
+                <div className="rounded-lg bg-red-500/10 p-3 text-xs text-red-200 border border-red-500/20">
+                  {processingState.error}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              {(processingState.status === "success" || processingState.status === "error") && (
+                <Button
+                  type="button"
+                  onClick={() => setProcessingState(prev => ({ ...prev, isOpen: false }))}
+                >
+                  Закрити
+                </Button>
+              )}
             </div>
           </div>
         </div>

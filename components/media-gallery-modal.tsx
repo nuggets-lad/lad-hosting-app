@@ -44,62 +44,75 @@ const generateFilePath = (prefix: string, originalName: string) => {
 
 const optimizeImage = (file: File): Promise<File> => {
   return new Promise((resolve, reject) => {
-    // Skip optimization for non-image files or SVGs
-    if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+    // Skip optimization for non-image files, SVGs, or GIFs (to preserve animation)
+    if (!file.type.startsWith("image/") || file.type === "image/svg+xml" || file.type === "image/gif") {
       return resolve(file);
     }
 
     const img = new window.Image();
     const url = URL.createObjectURL(file);
     img.src = url;
+    img.crossOrigin = "anonymous";
+    
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        URL.revokeObjectURL(url);
-        return resolve(file);
-      }
-
-      const MAX_WIDTH = 1920;
-      const MAX_HEIGHT = 1080;
-      let width = img.width;
-      let height = img.height;
-
-      if (width > height) {
-        if (width > MAX_WIDTH) {
-          height *= MAX_WIDTH / width;
-          width = MAX_WIDTH;
-        }
-      } else {
-        if (height > MAX_HEIGHT) {
-          width *= MAX_HEIGHT / height;
-          height = MAX_HEIGHT;
-        }
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      ctx.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(
-        (blob) => {
+      try {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
           URL.revokeObjectURL(url);
-          if (blob) {
-            // Change extension to .webp
-            const newName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
-            const optimizedFile = new File([blob], newName, {
-              type: "image/webp",
-              lastModified: Date.now(),
-            });
-            resolve(optimizedFile);
-          } else {
-            resolve(file);
+          return resolve(file);
+        }
+
+        const MAX_WIDTH = 1920;
+        const MAX_HEIGHT = 1080;
+        let width = img.width;
+        let height = img.height;
+
+        // Calculate new dimensions
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
           }
-        },
-        "image/webp",
-        0.8
-      );
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw image to canvas
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(url);
+            if (blob) {
+              // Change extension to .webp
+              const newName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+              const optimizedFile = new File([blob], newName, {
+                type: "image/webp",
+                lastModified: Date.now(),
+              });
+              resolve(optimizedFile);
+            } else {
+              // Fallback if blob creation fails
+              resolve(file);
+            }
+          },
+          "image/webp",
+          0.8
+        );
+      } catch (e) {
+        console.error("Error during image optimization:", e);
+        URL.revokeObjectURL(url);
+        resolve(file);
+      }
     };
+
     img.onerror = (error) => {
       URL.revokeObjectURL(url);
       // If image loading fails, just return original file
@@ -250,7 +263,7 @@ export function MediaGalleryModal({ onSelect, trigger, websiteUuid, pathPrefix =
     fileInputRef.current?.click();
   };
 
-  const handlePaste = (event: React.ClipboardEvent<HTMLInputElement>) => {
+  const handlePaste = useCallback((event: React.ClipboardEvent<HTMLInputElement>) => {
     if (!canUpload) {
       return;
     }
@@ -266,7 +279,7 @@ export function MediaGalleryModal({ onSelect, trigger, websiteUuid, pathPrefix =
         uploadFile(file);
       }
     }
-  };
+  }, [canUpload, uploadFile]);
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     if (!canUpload) {
@@ -276,7 +289,7 @@ export function MediaGalleryModal({ onSelect, trigger, websiteUuid, pathPrefix =
     handleFiles(event.dataTransfer?.files ?? null);
   };
 
-  const handleUrlUpload = async () => {
+  const handleUrlUpload = useCallback(async () => {
     if (!uploadUrl || !uploadUrl.startsWith("http")) return;
     
     try {
@@ -344,7 +357,7 @@ export function MediaGalleryModal({ onSelect, trigger, websiteUuid, pathPrefix =
     } finally {
       setIsUploading(false);
     }
-  };
+  }, [uploadUrl, canUpload, uploadFile, supabase, websiteUuid]);
 
   const handleDelete = async (e: React.MouseEvent, image: MediaUpload) => {
     e.stopPropagation();
