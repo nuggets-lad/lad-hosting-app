@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PayloadPreview } from "@/components/payload-preview";
 import { MediaUploadInput } from "@/components/media-upload-input";
+import { AiAssistant, Message } from "@/components/ai-assistant";
 import { WebsiteDetailRecord, WebsiteHistoryEntry } from "@/lib/website-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { Loader2 } from "lucide-react";
@@ -23,7 +24,8 @@ type TabId =
   | "edit-siteframe-raw"
   | "edit-siteframe-structured"
   | "regenerate"
-  | "redeploy";
+  | "redeploy"
+  | "ai-assistant";
 
 type WebsiteDetailTabsProps = {
   site: WebsiteDetailRecord;
@@ -148,6 +150,7 @@ const CORE_NAV_ITEMS: NavItem[] = [
   { id: "auth", label: "Авторизація" },
   { id: "history", label: "Історія" },
   { id: "edit-global", label: "Глобальні поля" },
+  { id: "ai-assistant", label: "ШІ Асистент" },
 ];
 
 const SITEFRAME_NAV_ITEMS: NavItem[] = [
@@ -320,6 +323,12 @@ export function WebsiteDetailTabs({
   const [isDisabling, setIsDisabling] = useState(false);
   const [disableMessage, setDisableMessage] = useState<string | null>(null);
   const [disableError, setDisableError] = useState<string | null>(null);
+  const [aiMessages, setAiMessages] = useState<Message[]>([
+    {
+      role: "assistant",
+      content: "Привіт! Я ваш ШІ-асистент. Я можу допомогти вам налаштувати цей сайт. Що ви хочете змінити?",
+    },
+  ]);
   
   const [processingState, setProcessingState] = useState<{
     isOpen: boolean;
@@ -348,6 +357,12 @@ export function WebsiteDetailTabs({
     setDisableMessage(null);
     setDisableError(null);
     setIsDisabling(false);
+    setAiMessages([
+      {
+        role: "assistant",
+        content: "Привіт! Я ваш ШІ-асистент. Я можу допомогти вам налаштувати цей сайт. Що ви хочете змінити?",
+      },
+    ]);
   }, [site]);
 
   useEffect(() => {
@@ -1498,6 +1513,67 @@ export function WebsiteDetailTabs({
   );
 
   const renderContent = () => {
+    if (activeTab === "ai-assistant") {
+      // Merge global fields and button copy for AI context
+      const aiContextFields = {
+        ...globalFields,
+        login_button_text: buttonCopy.login_btn,
+        register_button_text: buttonCopy.register_btn,
+        bonus_button_text: buttonCopy.bonus_btn,
+      };
+
+      return (
+        <Card className="h-[800px] overflow-hidden border-0 bg-slate-900/50">
+          <AiAssistant
+            messages={aiMessages}
+            setMessages={setAiMessages}
+            globalFields={aiContextFields}
+            setGlobalFields={(fields) => {
+              // Separate button fields from standard global fields
+              const { 
+                login_button_text, 
+                register_button_text, 
+                bonus_button_text, 
+                ...restGlobalFields 
+              } = fields;
+
+              // Update Global Fields State
+              // We need to be careful not to overwrite with undefined if the AI didn't send them back, 
+              // but the AI usually sends back a patch or the whole object. 
+              // The AiAssistant component does: setGlobalFields({ ...globalFields, ...args });
+              // So 'fields' here is the NEW complete state.
+              
+              // However, 'restGlobalFields' might contain extra keys if we are not careful, 
+              // but GlobalFields type is strict in this file? No, it's a type alias.
+              // We should cast or ensure we only update known fields if we want to be safe,
+              // but for now let's trust the AI sends valid keys or we just store them.
+              // Actually, setGlobalFields expects the exact GlobalFields type.
+              // We need to construct a valid GlobalFields object.
+              
+              setGlobalFields((prev) => ({
+                ...prev,
+                ...(restGlobalFields as any),
+              }));
+
+              // Update Button Copy State
+              setButtonCopy((prev) => ({
+                ...prev,
+                ...(login_button_text !== undefined && { login_btn: login_button_text }),
+                ...(register_button_text !== undefined && { register_btn: register_button_text }),
+                ...(bonus_button_text !== undefined && { bonus_btn: bonus_button_text }),
+              }));
+
+              setGlobalDirty(true);
+            }}
+            siteframeContent={siteframeValue}
+            setSiteframeContent={(content) => {
+              setSiteframeValue(content);
+              setSiteframeDirty(true);
+            }}
+          />
+        </Card>
+      );
+    }
     if (activeTab === "auth") {
       return renderAuth();
     }
