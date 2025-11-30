@@ -42,6 +42,73 @@ const generateFilePath = (prefix: string, originalName: string) => {
   return `${folder}${cleanedPrefix}-${Date.now()}-${id}.${extension}`;
 };
 
+const optimizeImage = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    // Skip optimization for non-image files or SVGs
+    if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+      return resolve(file);
+    }
+
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.src = url;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return resolve(file);
+      }
+
+      const MAX_WIDTH = 1920;
+      const MAX_HEIGHT = 1080;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(url);
+          if (blob) {
+            // Change extension to .webp
+            const newName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+            const optimizedFile = new File([blob], newName, {
+              type: "image/webp",
+              lastModified: Date.now(),
+            });
+            resolve(optimizedFile);
+          } else {
+            resolve(file);
+          }
+        },
+        "image/webp",
+        0.8
+      );
+    };
+    img.onerror = (error) => {
+      URL.revokeObjectURL(url);
+      // If image loading fails, just return original file
+      console.warn("Image optimization failed, using original file", error);
+      resolve(file);
+    };
+  });
+};
+
 export function MediaGalleryModal({ onSelect, trigger, websiteUuid, pathPrefix = "media" }: MediaGalleryModalProps) {
   const [open, setOpen] = useState(false)
   const [images, setImages] = useState<MediaUpload[]>([])
@@ -131,10 +198,13 @@ export function MediaGalleryModal({ onSelect, trigger, websiteUuid, pathPrefix =
       setIsUploading(true);
       resetUploadMessages();
       try {
-        const path = generateFilePath(pathPrefix, file.name || "image.png");
-        const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(path, file, {
+        const optimizedFile = await optimizeImage(file);
+        const path = generateFilePath(pathPrefix, optimizedFile.name);
+        
+        const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(path, optimizedFile, {
           upsert: false,
           cacheControl: "3600",
+          contentType: optimizedFile.type,
         });
         if (uploadError) {
           throw uploadError;
@@ -145,15 +215,13 @@ export function MediaGalleryModal({ onSelect, trigger, websiteUuid, pathPrefix =
         }
 
         await supabase.from("media_uploads").insert({
-          filename: file.name,
+          filename: optimizedFile.name,
           url: data.publicUrl,
           website_uuid: websiteUuid || null,
         });
 
         setUploadMessage("Зображення успішно завантажено!");
         fetchImages(); // Refresh gallery
-        // Optional: auto-select
-        // handleSelect(data.publicUrl); 
       } catch (error) {
         const message = error instanceof Error ? error.message : "Не вдалося завантажити файл.";
         setUploadError(message);
@@ -215,6 +283,31 @@ export function MediaGalleryModal({ onSelect, trigger, websiteUuid, pathPrefix =
       setIsUploading(true);
       resetUploadMessages();
 
+      // Try to fetch and upload the image (if CORS allows)
+      try {
+        const response = await fetch(uploadUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          if (blob.type.startsWith("image/")) {
+            let filename = "external-image.png";
+            try {
+              const urlObj = new URL(uploadUrl);
+              const pathname = urlObj.pathname;
+              const possibleName = pathname.split("/").pop();
+              if (possibleName && possibleName.includes(".")) {
+                filename = possibleName;
+              }
+            } catch {}
+            
+            const file = new File([blob], filename, { type: blob.type });
+            await uploadFile(file);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Could not fetch image client-side (likely CORS), falling back to saving URL", e);
+      }
+
       // Check if image already exists in gallery
       const { data: existing } = await supabase
         .from("media_uploads")
@@ -240,7 +333,7 @@ export function MediaGalleryModal({ onSelect, trigger, websiteUuid, pathPrefix =
           website_uuid: websiteUuid || null,
         });
         
-        setUploadMessage("Посилання збережено в галерею.");
+        setUploadMessage("Посилання збережено в галерею (зовнішнє джерело).");
         fetchImages();
       } else {
         setUploadMessage("Це зображення вже є в галереї.");
