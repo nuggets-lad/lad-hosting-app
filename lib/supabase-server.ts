@@ -3,5 +3,5 @@ import { cookies } from "next/headers";
 
 export const createClient = async () => {
   const cookieStore = await cookies();
-  return createServerComponentClient({ cookies: () => cookieStore });
+  return createServerComponentClient({ cookies: () => Promise.resolve(cookieStore) });
 };

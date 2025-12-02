@@ -184,7 +184,6 @@ export function QuickReferralEdit({ websites }: { websites: Website[] }) {
                   <td className="px-4 py-3 text-right align-top pt-3">
                     {isDirty && (
                       <Button
-                        size="sm"
                         onClick={() => handleSave(site)}
                         disabled={isSavingRow}
                         className="h-8 px-3 bg-emerald-600 hover:bg-emerald-500 text-white"
