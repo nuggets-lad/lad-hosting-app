@@ -34,6 +34,7 @@ type WebsiteDetailTabsProps = {
   siteUrl: string | null;
   statusDisplay: string;
   environmentLabel: string;
+  isAdmin: boolean;
 };
 
 type ButtonField = "login_button_text" | "register_button_text" | "bonus_button_text";
@@ -301,6 +302,7 @@ export function WebsiteDetailTabs({
   siteUrl,
   statusDisplay,
   environmentLabel,
+  isAdmin,
 }: WebsiteDetailTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [globalFields, setGlobalFields] = useState<GlobalFields>(() => buildGlobalFields(site));
@@ -1008,10 +1010,12 @@ export function WebsiteDetailTabs({
           Назва бренду
           <Input value={globalFields.brand} onChange={(event) => handleGlobalFieldChange("brand", event.target.value)} placeholder="Bizzo" />
         </label>
+        {isAdmin && (
         <label className="space-y-2 text-xs font-semibold text-slate-400">
           Красиве посилання
           <Input value={globalFields.pretty_link} onChange={(event) => handleGlobalFieldChange("pretty_link", event.target.value)} placeholder="casino.brand" />
         </label>
+        )}
         <label className="space-y-2 text-xs font-semibold text-slate-400">
           Основний домен
           <Input value={globalFields.domain} onChange={(event) => handleGlobalFieldChange("domain", event.target.value)} placeholder="brand.com" />
@@ -1469,7 +1473,7 @@ export function WebsiteDetailTabs({
       <Card className="space-y-3">
         <FieldLabel>Швидкі шорткоди</FieldLabel>
         <div className="grid gap-4 md:grid-cols-3">
-          {DASHBOARD_CARDS.map((card) => (
+          {DASHBOARD_CARDS.filter((card) => isAdmin || card.id !== "auth").map((card) => (
             <button
               key={card.id}
               type="button"
@@ -1603,31 +1607,35 @@ export function WebsiteDetailTabs({
           <p className="text-lg font-semibold text-white">{site.domain ?? "Website"}</p>
         </div>
         <nav className="flex-1 space-y-4 overflow-y-auto px-4 py-6">
-          <div className="space-y-2">{CORE_NAV_ITEMS.map((item) => renderNavButton(item))}</div>
+          <div className="space-y-2">{CORE_NAV_ITEMS.filter((item) => isAdmin || item.id !== "auth").map((item) => renderNavButton(item))}</div>
           <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-4">
             <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Siteframe</p>
             <div className="mt-3 space-y-2">{SITEFRAME_NAV_ITEMS.map((item) => renderNavButton(item, { isSub: true }))}</div>
           </div>
-          <div className="rounded-3xl border border-amber-200/40 bg-amber-500/10 p-4">
-            <p className="text-[11px] uppercase tracking-[0.3em] text-amber-100">Небезпечні дії</p>
-            <p className="mt-1 text-xs text-amber-50/80">Запускає повну перебілдку або редеплой.</p>
-            <div className="mt-3 space-y-2">{DANGER_NAV_ITEMS.map((item) => renderNavButton(item, { tone: "warning" }))}</div>
-          </div>
-          <div className="rounded-3xl border border-red-500/30 bg-red-500/5 p-4">
-            <p className="text-[11px] uppercase tracking-[0.3em] text-red-200">Аварійні дії</p>
-            <p className="mt-1 text-xs text-red-100/80">Знімає деплой з сервера та видаляє додаток.</p>
-            <button
-              type="button"
-              onClick={handleDisableClick}
-              disabled={isDisabling}
-              className="mt-3 w-full rounded-2xl border border-red-400/60 px-4 py-2 text-sm font-semibold text-red-100 transition hover:border-red-200/80 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isDisabling ? "Надсилання…" : "Вимкнути сайт"}
-            </button>
-            <p className={`mt-2 text-xs ${disableStatusTone}`}>
-              {disableError || disableMessage || "Доступно лише для сайтів з app_uuid."}
-            </p>
-          </div>
+          {isAdmin && (
+            <>
+              <div className="rounded-3xl border border-amber-200/40 bg-amber-500/10 p-4">
+                <p className="text-[11px] uppercase tracking-[0.3em] text-amber-100">Небезпечні дії</p>
+                <p className="mt-1 text-xs text-amber-50/80">Запускає повну перебілдку або редеплой.</p>
+                <div className="mt-3 space-y-2">{DANGER_NAV_ITEMS.map((item) => renderNavButton(item, { tone: "warning" }))}</div>
+              </div>
+              <div className="rounded-3xl border border-red-500/30 bg-red-500/5 p-4">
+                <p className="text-[11px] uppercase tracking-[0.3em] text-red-200">Аварійні дії</p>
+                <p className="mt-1 text-xs text-red-100/80">Знімає деплой з сервера та видаляє додаток.</p>
+                <button
+                  type="button"
+                  onClick={handleDisableClick}
+                  disabled={isDisabling}
+                  className="mt-3 w-full rounded-2xl border border-red-400/60 px-4 py-2 text-sm font-semibold text-red-100 transition hover:border-red-200/80 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isDisabling ? "Надсилання…" : "Вимкнути сайт"}
+                </button>
+                <p className={`mt-2 text-xs ${disableStatusTone}`}>
+                  {disableError || disableMessage || "Доступно лише для сайтів з app_uuid."}
+                </p>
+              </div>
+            </>
+          )}
         </nav>
         <div className="space-y-3 border-t border-white/5 px-6 py-5 text-xs text-slate-500">
           <Link
@@ -1663,7 +1671,7 @@ export function WebsiteDetailTabs({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:hidden">
-            {CORE_NAV_ITEMS.map((item) => renderNavButton(item))}
+            {CORE_NAV_ITEMS.filter((item) => isAdmin || item.id !== "auth").map((item) => renderNavButton(item))}
           </div>
 
           <div className="rounded-3xl border border-white/5 bg-white/[0.02] p-4 lg:hidden">
@@ -1671,27 +1679,31 @@ export function WebsiteDetailTabs({
             <div className="mt-3 space-y-2">{SITEFRAME_NAV_ITEMS.map((item) => renderNavButton(item))}</div>
           </div>
 
-          <div className="rounded-3xl border border-amber-200/40 bg-amber-500/10 p-4 lg:hidden">
-            <p className="text-[11px] uppercase tracking-[0.3em] text-amber-100">Небезпечні дії</p>
-            <p className="mt-1 text-xs text-amber-50/80">Запускає повну перебілдку або редеплой.</p>
-            <div className="mt-3 space-y-2">{DANGER_NAV_ITEMS.map((item) => renderNavButton(item, { tone: "warning" }))}</div>
-          </div>
+          {isAdmin && (
+            <>
+              <div className="rounded-3xl border border-amber-200/40 bg-amber-500/10 p-4 lg:hidden">
+                <p className="text-[11px] uppercase tracking-[0.3em] text-amber-100">Небезпечні дії</p>
+                <p className="mt-1 text-xs text-amber-50/80">Запускає повну перебілдку або редеплой.</p>
+                <div className="mt-3 space-y-2">{DANGER_NAV_ITEMS.map((item) => renderNavButton(item, { tone: "warning" }))}</div>
+              </div>
 
-          <div className="rounded-3xl border border-red-500/30 bg-red-500/5 p-4 lg:hidden">
-            <p className="text-[11px] uppercase tracking-[0.3em] text-red-200">Аварійні дії</p>
-            <p className="mt-1 text-xs text-red-100/80">Знімає деплой з сервера та видаляє додаток.</p>
-            <Button
-              type="button"
-              onClick={handleDisableClick}
-              disabled={isDisabling}
-              className="mt-3 w-full bg-red-500 text-white hover:bg-red-400 disabled:opacity-60"
-            >
-              {isDisabling ? "Надсилання…" : "Вимкнути сайт"}
-            </Button>
-            <p className={`mt-2 text-xs ${disableStatusTone}`}>
-              {disableError || disableMessage || "Доступно лише для сайтів з app_uuid."}
-            </p>
-          </div>
+              <div className="rounded-3xl border border-red-500/30 bg-red-500/5 p-4 lg:hidden">
+                <p className="text-[11px] uppercase tracking-[0.3em] text-red-200">Аварійні дії</p>
+                <p className="mt-1 text-xs text-red-100/80">Знімає деплой з сервера та видаляє додаток.</p>
+                <Button
+                  type="button"
+                  onClick={handleDisableClick}
+                  disabled={isDisabling}
+                  className="mt-3 w-full bg-red-500 text-white hover:bg-red-400 disabled:opacity-60"
+                >
+                  {isDisabling ? "Надсилання…" : "Вимкнути сайт"}
+                </Button>
+                <p className={`mt-2 text-xs ${disableStatusTone}`}>
+                  {disableError || disableMessage || "Доступно лише для сайтів з app_uuid."}
+                </p>
+              </div>
+            </>
+          )}
 
           {renderContent()}
         </div>

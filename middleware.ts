@@ -20,17 +20,17 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
   const supabase = createMiddlewareClient({ req: request, res: response });
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
   const publicRoute = isPublicPath(pathname);
 
-  if (!session && !publicRoute) {
+  if (!user && !publicRoute) {
     return NextResponse.redirect(buildRedirectUrl(request, "/login"));
   }
 
-  if (session && pathname === "/login") {
+  if (user && pathname === "/login") {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

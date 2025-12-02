@@ -5,6 +5,7 @@ import { WebsiteDetailTabs } from "@/components/website-detail-tabs";
 import { supabaseClient } from "@/lib/supabase";
 import { statusLabels } from "@/lib/status-labels";
 import { WebsiteDetailRecord, WebsiteHistoryEntry, WebsiteHistoryField, WebsiteHistoryRow } from "@/lib/website-types";
+import { checkAdminAccess } from "@/app/admin/actions";
 
 const fetchWebsite = async (uuid: string | undefined) => {
   if (!supabaseClient) {
@@ -98,6 +99,7 @@ const prepareHistory = (history: WebsiteHistoryRow[]): WebsiteHistoryEntry[] =>
 export default async function WebsitePage({ params }: { params: Promise<{ uuid: string }> }) {
   const { uuid } = await params;
   const { site, history, error } = await fetchWebsite(uuid);
+  const isAdmin = await checkAdminAccess();
 
   if (!site) {
     if (!error) {
@@ -134,6 +136,7 @@ export default async function WebsitePage({ params }: { params: Promise<{ uuid: 
         siteUrl={siteUrl}
         statusDisplay={statusDisplay}
         environmentLabel={environmentLabel}
+        isAdmin={isAdmin}
       />
     </div>
   );

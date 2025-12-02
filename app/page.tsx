@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { supabaseClient } from "@/lib/supabase";
 import { statusLabels } from "@/lib/status-labels";
+import { checkAdminAccess } from "@/app/admin/actions";
+import { Shield, Link as LinkIcon } from "lucide-react";
 
 type Website = {
   uuid: string;
@@ -82,6 +84,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
   const activeStatus = allowedFilters.includes(rawStatus ?? "") ? (rawStatus as string) : "all";
 
   const { data: websites, error } = await getWebsites();
+  const isAdmin = await checkAdminAccess();
 
   const baseCounts = STATUS_ORDER.reduce((acc, status) => {
     acc[status] = 0;
@@ -111,12 +114,32 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
               <p className="text-xs font-semibold uppercase tracking-[0.4em] text-amber-300">OP Tools</p>
               <h1 className="text-3xl font-semibold text-white sm:text-4xl">Сайти</h1>
             </div>
-            <Link
-              href="/websites/create"
-              className="inline-flex items-center justify-center rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-2 text-sm font-semibold text-amber-200 transition hover:border-amber-300 hover:text-white"
-            >
-              Створити Сайт
-            </Link>
+            <div className="flex items-center gap-3">
+              {isAdmin && (
+                <>
+                  <Link
+                    href="/admin"
+                    className="inline-flex items-center justify-center rounded-2xl border border-purple-500/40 bg-purple-500/10 px-5 py-2 text-sm font-semibold text-purple-200 transition hover:border-purple-400 hover:text-white"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Адмін панель
+                  </Link>
+                  <Link
+                    href="/admin/referrals"
+                    className="inline-flex items-center justify-center rounded-2xl border border-blue-500/40 bg-blue-500/10 px-5 py-2 text-sm font-semibold text-blue-200 transition hover:border-blue-400 hover:text-white"
+                  >
+                    <LinkIcon className="w-4 h-4 mr-2" />
+                    Редактор посилань
+                  </Link>
+                </>
+              )}
+              <Link
+                href="/websites/create"
+                className="inline-flex items-center justify-center rounded-2xl border border-amber-400/40 bg-amber-400/10 px-5 py-2 text-sm font-semibold text-amber-200 transition hover:border-amber-300 hover:text-white"
+              >
+                Створити Сайт
+              </Link>
+            </div>
           </div>
           {error && (
             <div className="rounded-2xl border border-red-600/60 bg-red-900/40 px-4 py-2 text-sm text-red-200">
