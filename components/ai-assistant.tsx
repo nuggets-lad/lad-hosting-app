@@ -70,7 +70,7 @@ export function AiAssistant({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
   useEffect(() => {
     if (isLoading) {
@@ -195,7 +195,7 @@ export function AiAssistant({
         <p className="text-xs text-slate-400">Допомагає редагувати контент та налаштування</p>
       </div>
 
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <div className="flex-1 p-4 overflow-y-auto" ref={scrollRef}>
         <div className="space-y-4">
           {messages.map((msg, idx) => {
             if (msg.role === "system" || msg.role === "tool") return null;
@@ -305,7 +305,7 @@ export function AiAssistant({
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       <div className="p-4 border-t border-white/10 bg-slate-900/50">
         <div className="relative rounded-xl border border-white/10 bg-slate-950 focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/20 transition-all">

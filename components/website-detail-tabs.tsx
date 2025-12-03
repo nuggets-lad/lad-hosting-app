@@ -82,7 +82,7 @@ type NavItem = {
   label: string;
 };
 
-type SaveTarget = "global" | "siteframe";
+type SaveTarget = "global" | "siteframe" | "mixed";
 type ActionTarget = SaveTarget | "regenerate" | "redeploy" | "disable";
 
 type GlobalFields = {
@@ -445,8 +445,8 @@ export function WebsiteDetailTabs({
     }
   };
 
-  const saveTarget: SaveTarget | null = activeTab === "edit-global" ? "global" : isSiteframeTab ? "siteframe" : null;
-  const disableSave = !saveTarget || isSaving || (saveTarget === "global" ? !globalDirty : !siteframeDirty);
+  const saveTarget: SaveTarget | null = activeTab === "edit-global" ? "global" : isSiteframeTab ? "siteframe" : activeTab === "ai-assistant" ? "mixed" : null;
+  const disableSave = !saveTarget || isSaving || (saveTarget === "global" ? !globalDirty : saveTarget === "siteframe" ? !siteframeDirty : (!globalDirty && !siteframeDirty));
   const resetRegenerationStatus = () => {
     setRegenerateMessage(null);
     setRegenerateError(null);
@@ -690,7 +690,7 @@ export function WebsiteDetailTabs({
         setProcessingState(prev => ({ ...prev, step: 2, message: "Збереження змін в базу даних..." }));
         
         const updateData: any = {};
-        if (target === "global") {
+        if (target === "global" || target === "mixed") {
           updateData.brand = globalFields.brand;
           updateData.pretty_link = globalFields.pretty_link;
           updateData.logo = globalFields.logo;
@@ -708,7 +708,9 @@ export function WebsiteDetailTabs({
           updateData.global_code_after_head_open = globalFields.global_code_after_head_open;
           updateData.global_code_after_body_open = globalFields.global_code_after_body_open;
           if (globalFields.domain.trim()) updateData.domain = globalFields.domain.trim();
-        } else if (target === "siteframe") {
+        }
+        
+        if (target === "siteframe" || target === "mixed") {
           updateData.payload = siteframeValue;
         }
 
@@ -750,7 +752,7 @@ export function WebsiteDetailTabs({
           draft_non_imported: true,
           default_status: "publish",
           pretty_link: globalFields.pretty_link || site.pretty_link,
-          payload: target === "siteframe" ? siteframeValue : (site.payload || ""),
+          payload: (target === "siteframe" || target === "mixed") ? siteframeValue : (site.payload || ""),
           global_options: currentGlobal
         };
 
@@ -779,8 +781,8 @@ export function WebsiteDetailTabs({
 
         setProcessingState(prev => ({ ...prev, status: "success", message: "Оновлення успішно завершено!" }));
         
-        if (target === "global") setGlobalDirty(false);
-        else setSiteframeDirty(false);
+        if (target === "global" || target === "mixed") setGlobalDirty(false);
+        if (target === "siteframe" || target === "mixed") setSiteframeDirty(false);
 
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unknown error";
@@ -860,6 +862,9 @@ export function WebsiteDetailTabs({
     }
     if (target === "siteframe") {
       return "відправити Siteframe payload";
+    }
+    if (target === "mixed") {
+      return "відправити всі зміни (глобальні поля та Siteframe)";
     }
     if (target === "regenerate") {
       return "запустити повну перегенерацію";
