@@ -11,7 +11,7 @@ import { MediaUploadInput } from "@/components/media-upload-input";
 import { AiAssistant, Message } from "@/components/ai-assistant";
 import { WebsiteDetailRecord, WebsiteHistoryEntry } from "@/lib/website-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { Loader2 } from "lucide-react";
+import { Loader2, RotateCcw } from "lucide-react";
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleString("en-US", { timeZone: "UTC", hour12: false });
@@ -969,6 +969,57 @@ export function WebsiteDetailTabs({
     </Card>
   );
 
+  const handleRollback = (entryData: Record<string, unknown>) => {
+    if (!confirm("Ви впевнені, що хочете відновити цю версію? Поточні незбережені зміни будуть втрачені.")) {
+      return;
+    }
+
+    // Restore Global Fields
+    const newGlobalFields: GlobalFields = { ...globalFields };
+    
+    const setIfString = (key: keyof GlobalFields) => {
+      if (typeof entryData[key] === 'string') {
+        newGlobalFields[key] = entryData[key] as string;
+      } else if (entryData[key] === null) {
+         newGlobalFields[key] = "";
+      }
+    };
+
+    setIfString("brand");
+    setIfString("pretty_link");
+    setIfString("domain");
+    setIfString("ref");
+    setIfString("logo");
+    setIfString("banner");
+    setIfString("banner_mobile");
+    setIfString("image_1");
+    setIfString("image_2");
+    setIfString("image_3");
+    setIfString("image_4");
+    setIfString("locale");
+    setIfString("favicon");
+    setIfString("global_code_after_head_open");
+    setIfString("global_code_after_body_open");
+
+    setGlobalFields(newGlobalFields);
+    setGlobalDirty(true);
+
+    // Restore Button Copy
+    const newButtonCopy = { ...buttonCopy };
+    if (typeof entryData.login_button_text === 'string') newButtonCopy.login_btn = entryData.login_button_text;
+    if (typeof entryData.register_button_text === 'string') newButtonCopy.register_btn = entryData.register_button_text;
+    if (typeof entryData.bonus_button_text === 'string') newButtonCopy.bonus_btn = entryData.bonus_button_text;
+    setButtonCopy(newButtonCopy);
+
+    // Restore Siteframe
+    if (typeof entryData.payload === 'string') {
+      setSiteframeValue(entryData.payload);
+      setSiteframeDirty(true);
+    }
+
+    alert("Дані завантажено з історії. Перейдіть на відповідні вкладки, перевірте та збережіть зміни.");
+  };
+
   const renderHistory = () => (
     <Card className="space-y-5">
       <div>
@@ -980,8 +1031,18 @@ export function WebsiteDetailTabs({
       <div className="space-y-4">
         {history.map((entry) => (
           <article key={entry.id} className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm">
-            <p className="text-xs text-slate-400">Зміни від {formatDate(entry.changed_at)} UTC</p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-slate-400">Зміни від {formatDate(entry.changed_at)} UTC</p>
+              <Button
+                variant="ghost"
+                onClick={() => handleRollback(entry.data)}
+                className="h-7 px-2 text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10"
+              >
+                <RotateCcw className="mr-1.5 h-3 w-3" />
+                Відновити цю версію
+              </Button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
               {entry.fields.map((field, index) => {
                 const truncatedValue = field.value.length > 500 ? `${field.value.slice(0, 500)}…` : field.value;
                 return (

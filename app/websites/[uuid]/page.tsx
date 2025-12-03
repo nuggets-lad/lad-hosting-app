@@ -83,7 +83,6 @@ const formatHistoryValue = (value: unknown): string => {
 const collectHistoryFields = (value: unknown): WebsiteHistoryField[] => {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     return Object.entries(value as Record<string, unknown>)
-      .slice(0, 8)
       .map(([key, entryValue]) => ({ key, value: formatHistoryValue(entryValue) }));
   }
   return [{ key: "payload", value: formatHistoryValue(value) }];
@@ -94,6 +93,7 @@ const prepareHistory = (history: WebsiteHistoryRow[]): WebsiteHistoryEntry[] =>
     id: entry.id,
     changed_at: entry.changed_at,
     fields: collectHistoryFields(entry.data),
+    data: entry.data as Record<string, unknown>,
   }));
 
 export default async function WebsitePage({ params }: { params: Promise<{ uuid: string }> }) {

@@ -45,6 +45,7 @@ export type WebsiteHistoryEntry = {
   id: number;
   changed_at: string;
   fields: WebsiteHistoryField[];
+  data: Record<string, unknown>;
 };
 
 export type WebsiteHistoryRow = {
