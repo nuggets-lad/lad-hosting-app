@@ -1048,10 +1048,25 @@ export function WebsiteDetailTabs({
                 return (
                   <div
                     key={`${entry.id}-${field.key}-${index}`}
-                    className="rounded-2xl border border-slate-800/70 bg-slate-900/70 p-3 text-left"
+                    className={`rounded-2xl border p-3 text-left transition-colors ${
+                      field.changed 
+                        ? "border-emerald-500/50 bg-emerald-900/20 shadow-[0_0_15px_-3px_rgba(16,185,129,0.1)]" 
+                        : "border-slate-800/70 bg-slate-900/70 opacity-60 hover:opacity-100"
+                    }`}
                   >
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{field.key}</p>
-                    <p className="whitespace-pre-wrap break-words text-sm text-slate-100">{truncatedValue}</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className={`text-[11px] uppercase tracking-[0.2em] ${field.changed ? "text-emerald-400 font-bold" : "text-slate-500"}`}>
+                        {field.key}
+                      </p>
+                      {field.changed && (
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full border border-emerald-500/30">
+                          Змінено
+                        </span>
+                      )}
+                    </div>
+                    <p className={`whitespace-pre-wrap break-words text-sm ${field.changed ? "text-white" : "text-slate-300"}`}>
+                      {truncatedValue}
+                    </p>
                   </div>
                 );
               })}

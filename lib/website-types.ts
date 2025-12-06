@@ -39,6 +39,7 @@ export type WebsiteDetailRecord = {
 export type WebsiteHistoryField = {
   key: string;
   value: string;
+  changed?: boolean;
 };
 
 export type WebsiteHistoryEntry = {

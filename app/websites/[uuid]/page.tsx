@@ -89,12 +89,37 @@ const collectHistoryFields = (value: unknown): WebsiteHistoryField[] => {
 };
 
 const prepareHistory = (history: WebsiteHistoryRow[]): WebsiteHistoryEntry[] =>
-  history.map((entry) => ({
-    id: entry.id,
-    changed_at: entry.changed_at,
-    fields: collectHistoryFields(entry.data),
-    data: entry.data as Record<string, unknown>,
-  }));
+  history.map((entry, index) => {
+    const previousEntry = history[index + 1];
+    const currentData = entry.data as Record<string, unknown>;
+    const previousData = previousEntry ? (previousEntry.data as Record<string, unknown>) : null;
+
+    const fields = collectHistoryFields(currentData).map((field) => {
+      let changed = false;
+      if (previousData) {
+        const currentRawValue = currentData[field.key];
+        const previousRawValue = previousData[field.key];
+        // Use JSON stringify for comparison to handle objects/arrays and ensure value equality
+        if (JSON.stringify(currentRawValue) !== JSON.stringify(previousRawValue)) {
+          changed = true;
+        }
+      }
+      return { ...field, changed };
+    });
+
+    // Sort fields so changed ones appear first
+    fields.sort((a, b) => {
+      if (a.changed === b.changed) return 0;
+      return a.changed ? -1 : 1;
+    });
+
+    return {
+      id: entry.id,
+      changed_at: entry.changed_at,
+      fields,
+      data: currentData,
+    };
+  });
 
 export default async function WebsitePage({ params }: { params: Promise<{ uuid: string }> }) {
   const { uuid } = await params;
