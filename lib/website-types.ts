@@ -37,6 +37,11 @@ export type WebsiteDetailRecord = {
   robots_txt: string | null;
   htaccess: string | null;
   redirect_404: boolean | null;
+  spyserp_project_id: number | null;
+  spyserp_domain_id: number | null;
+  spyserp_folder_name: string | null;
+  spyserp_valuemetric_id: number | null;
+  spyserp_engine_id: number | null;
 };
 
 export type WebsiteHistoryField = {

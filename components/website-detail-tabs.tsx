@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PayloadPreview } from "@/components/payload-preview";
 import { MediaUploadInput } from "@/components/media-upload-input";
 import { AiAssistant, Message } from "@/components/ai-assistant";
+import { SeoPositions } from "@/components/analytics/seo-positions";
 import { WebsiteDetailRecord, WebsiteHistoryEntry } from "@/lib/website-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { Loader2, RotateCcw } from "lucide-react";
@@ -25,7 +26,8 @@ type TabId =
   | "edit-siteframe-structured"
   | "regenerate"
   | "redeploy"
-  | "ai-assistant";
+  | "ai-assistant"
+  | "analytics";
 
 type WebsiteDetailTabsProps = {
   site: WebsiteDetailRecord;
@@ -104,6 +106,11 @@ type GlobalFields = {
   robots_txt: string;
   htaccess: string;
   redirect_404: boolean;
+  spyserp_project_id: string;
+  spyserp_domain_id: string;
+  spyserp_folder_name: string;
+  spyserp_valuemetric_id: string;
+  spyserp_engine_id: string;
 };
 
 type ButtonCopyState = Record<ButtonTokenId, string>;
@@ -154,6 +161,7 @@ const CORE_NAV_ITEMS: NavItem[] = [
   { id: "auth", label: "Авторизація" },
   { id: "history", label: "Історія" },
   { id: "edit-global", label: "Глобальні поля" },
+  { id: "analytics", label: "Аналітика" },
   { id: "ai-assistant", label: "ШІ Асистент" },
 ];
 
@@ -225,6 +233,11 @@ const buildGlobalFields = (site: WebsiteDetailRecord): GlobalFields => ({
   robots_txt: site.robots_txt ?? "",
   htaccess: site.htaccess ?? "",
   redirect_404: site.redirect_404 ?? true,
+  spyserp_project_id: site.spyserp_project_id?.toString() ?? "",
+  spyserp_domain_id: site.spyserp_domain_id?.toString() ?? "",
+  spyserp_folder_name: site.spyserp_folder_name ?? "",
+  spyserp_valuemetric_id: site.spyserp_valuemetric_id?.toString() ?? "",
+  spyserp_engine_id: site.spyserp_engine_id?.toString() ?? "",
 });
 
 const buildButtonCopy = (site: WebsiteDetailRecord): ButtonCopyState => {
@@ -716,6 +729,11 @@ export function WebsiteDetailTabs({
           updateData.robots_txt = globalFields.robots_txt;
           updateData.htaccess = globalFields.htaccess;
           updateData.redirect_404 = globalFields.redirect_404;
+          updateData.spyserp_project_id = globalFields.spyserp_project_id ? Number(globalFields.spyserp_project_id) : null;
+          updateData.spyserp_domain_id = globalFields.spyserp_domain_id ? Number(globalFields.spyserp_domain_id) : null;
+          updateData.spyserp_folder_name = globalFields.spyserp_folder_name || null;
+          updateData.spyserp_valuemetric_id = globalFields.spyserp_valuemetric_id ? Number(globalFields.spyserp_valuemetric_id) : null;
+          updateData.spyserp_engine_id = globalFields.spyserp_engine_id ? Number(globalFields.spyserp_engine_id) : null;
           if (globalFields.domain.trim()) updateData.domain = globalFields.domain.trim();
         }
         
@@ -955,13 +973,13 @@ export function WebsiteDetailTabs({
   );
 
   const renderAuth = () => (
-    <Card className="space-y-5">
-      <div>
+    <Card>
+      <CardHeader>
         <FieldLabel>Авторизація</FieldLabel>
-        <h2 className="text-lg font-semibold text-white">Параметри доступу</h2>
+        <CardTitle className="text-lg font-semibold text-white">Параметри доступу</CardTitle>
         <p className="text-xs text-slate-400">Використовуйте ці дані для входу до адмін-панелі та інтеграції.</p>
-      </div>
-      <div className="space-y-3 text-sm text-slate-200">
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm text-slate-200">
         <p>
           Адмін-панель:
           {" "}
@@ -977,7 +995,7 @@ export function WebsiteDetailTabs({
         <p>Пароль: {site.admin_password ?? "не встановлено"}</p>
         <p>API-ключ: {site.api_key ?? "не встановлено"}</p>
         <p>Ref: {site.ref ?? "не встановлено"}</p>
-      </div>
+      </CardContent>
     </Card>
   );
 
@@ -1039,14 +1057,14 @@ export function WebsiteDetailTabs({
   };
 
   const renderHistory = () => (
-    <Card className="space-y-5">
-      <div>
+    <Card>
+      <CardHeader>
         <FieldLabel>Історія</FieldLabel>
-        <h2 className="text-lg font-semibold text-white">Збережені зміни</h2>
+        <CardTitle className="text-lg font-semibold text-white">Збережені зміни</CardTitle>
         <p className="text-xs text-slate-400">Останні 12 записів з `websites_history`.</p>
-      </div>
-      {!history.length && <p className="text-sm text-slate-500">Ще немає записів в історії.</p>}
-      <div className="space-y-4">
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!history.length && <p className="text-sm text-slate-500">Ще немає записів в історії.</p>}
         {history.map((entry) => (
           <article key={entry.id} className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm">
             <div className="flex items-center justify-between">
@@ -1091,200 +1109,204 @@ export function WebsiteDetailTabs({
             </div>
           </article>
         ))}
-      </div>
+      </CardContent>
     </Card>
   );
 
   const renderEditGlobal = () => (
-    <Card className="space-y-5">
-      <div>
+    <Card>
+      <CardHeader>
         <FieldLabel>Глобальні поля</FieldLabel>
-        <h2 className="text-lg font-semibold text-white">Брендинг та посилання</h2>
-        <p className="text-xs text-slate-400">
+        <CardTitle className="text-lg font-semibold text-white">Брендинг та посилання</CardTitle>
+        <CardDescription>
           Дані відображаються напряму з таблиці `websites`. Оновлення відбудеться після інтеграції з API.
-        </p>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2 text-xs font-semibold text-slate-400">
-          Назва бренду
-          <Input value={globalFields.brand} onChange={(event) => handleGlobalFieldChange("brand", event.target.value)} placeholder="Bizzo" />
-        </label>
-        {isAdmin && (
-        <label className="space-y-2 text-xs font-semibold text-slate-400">
-          Красиве посилання
-          <Input value={globalFields.pretty_link} onChange={(event) => handleGlobalFieldChange("pretty_link", event.target.value)} placeholder="casino.brand" />
-        </label>
-        )}
-        <label className="space-y-2 text-xs font-semibold text-slate-400">
-          Основний домен
-          <Input value={globalFields.domain} onChange={(event) => handleGlobalFieldChange("domain", event.target.value)} placeholder="brand.com" />
-        </label>
-        <label className="space-y-2 text-xs font-semibold text-slate-400">
-          Локаль інтерфейсу
-          <Input value={globalFields.locale} onChange={(event) => handleGlobalFieldChange("locale", event.target.value)} placeholder="uk-UA" />
-        </label>
-        <label className="space-y-2 text-xs font-semibold text-slate-400">
-          Tracking ref
-          <Input value={globalFields.ref} onChange={(event) => handleGlobalFieldChange("ref", event.target.value)} placeholder="https://partners.brand.com/?ref=..." />
-        </label>
-      </div>
-      <div className="space-y-3">
-        <FieldLabel>Global Code Injection</FieldLabel>
-        <div className="grid gap-4 md:grid-cols-1">
-          <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
-            Code after &lt;head&gt; open
-            <Textarea 
-              value={globalFields.global_code_after_head_open} 
-              onChange={(event) => handleGlobalFieldChange("global_code_after_head_open", event.target.value)} 
-              rows={4} 
-              placeholder="<script>...</script>" 
-              className="min-h-[100px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
-            Code after &lt;body&gt; open
-            <Textarea 
-              value={globalFields.global_code_after_body_open} 
-              onChange={(event) => handleGlobalFieldChange("global_code_after_body_open", event.target.value)} 
-              rows={4} 
-              placeholder="<noscript>...</noscript>" 
-              className="min-h-[100px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
-            />
-          </label>
-        </div>
-      </div>
-      <div className="space-y-3">
-        <FieldLabel>Медіа</FieldLabel>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-8">
         <div className="grid gap-4 md:grid-cols-2">
-          <MediaUploadInput websiteUuid={site.uuid}
-            label="Favicon"
-            value={globalFields.favicon}
-            onChange={(val) => handleGlobalFieldChange("favicon", val)}
-            placeholder="https://cdn.brand.com/favicon.png"
-            pathPrefix={`${site.uuid}-favicon`}
-          />
-          <MediaUploadInput websiteUuid={site.uuid}
-            label="Логотип URL"
-            value={globalFields.logo}
-            onChange={(val) => handleGlobalFieldChange("logo", val)}
-            placeholder="https://cdn.brand.com/logo.svg"
-            pathPrefix={`${site.uuid}-logo`}
-          />
-          <MediaUploadInput websiteUuid={site.uuid}
-            label="Банер Hero"
-            value={globalFields.banner}
-            onChange={(val) => handleGlobalFieldChange("banner", val)}
-            placeholder="https://cdn.brand.com/hero.png"
-            pathPrefix={`${site.uuid}-banner`}
-          />
-          <MediaUploadInput websiteUuid={site.uuid}
-            label="Банер Hero (Mobile)"
-            value={globalFields.banner_mobile}
-            onChange={(val) => handleGlobalFieldChange("banner_mobile", val)}
-            placeholder="https://cdn.brand.com/hero-mobile.png"
-            pathPrefix={`${site.uuid}-banner-mobile`}
-          />
-          <MediaUploadInput websiteUuid={site.uuid}
-            label="Зображення 1"
-            value={globalFields.image_1}
-            onChange={(val) => handleGlobalFieldChange("image_1", val)}
-            placeholder="https://cdn.brand.com/image1.jpg"
-            pathPrefix={`${site.uuid}-image-1`}
-          />
-          <MediaUploadInput websiteUuid={site.uuid}
-            label="Зображення 2"
-            value={globalFields.image_2}
-            onChange={(val) => handleGlobalFieldChange("image_2", val)}
-            placeholder="https://cdn.brand.com/image2.jpg"
-            pathPrefix={`${site.uuid}-image-2`}
-          />
-          <MediaUploadInput websiteUuid={site.uuid}
-            label="Зображення 3"
-            value={globalFields.image_3}
-            onChange={(val) => handleGlobalFieldChange("image_3", val)}
-            placeholder="https://cdn.brand.com/image3.jpg"
-            pathPrefix={`${site.uuid}-image-3`}
-          />
-          <MediaUploadInput websiteUuid={site.uuid}
-            label="Зображення 4"
-            value={globalFields.image_4}
-            onChange={(val) => handleGlobalFieldChange("image_4", val)}
-            placeholder="https://cdn.brand.com/image4.jpg"
-            pathPrefix={`${site.uuid}-image-4`}
-          />
+          <label className="space-y-2 text-xs font-semibold text-slate-400">
+            Назва бренду
+            <Input value={globalFields.brand} onChange={(event) => handleGlobalFieldChange("brand", event.target.value)} placeholder="Bizzo" />
+          </label>
+          {isAdmin && (
+          <label className="space-y-2 text-xs font-semibold text-slate-400">
+            Красиве посилання
+            <Input value={globalFields.pretty_link} onChange={(event) => handleGlobalFieldChange("pretty_link", event.target.value)} placeholder="casino.brand" />
+          </label>
+          )}
+          <label className="space-y-2 text-xs font-semibold text-slate-400">
+            Основний домен
+            <Input value={globalFields.domain} onChange={(event) => handleGlobalFieldChange("domain", event.target.value)} placeholder="brand.com" />
+          </label>
+          <label className="space-y-2 text-xs font-semibold text-slate-400">
+            Локаль інтерфейсу
+            <Input value={globalFields.locale} onChange={(event) => handleGlobalFieldChange("locale", event.target.value)} placeholder="uk-UA" />
+          </label>
+          <label className="space-y-2 text-xs font-semibold text-slate-400">
+            Tracking ref
+            <Input value={globalFields.ref} onChange={(event) => handleGlobalFieldChange("ref", event.target.value)} placeholder="https://partners.brand.com/?ref=..." />
+          </label>
         </div>
-      </div>
-      <div className="space-y-3">
-        <FieldLabel>Серверні налаштування</FieldLabel>
-        <div className="grid gap-4 md:grid-cols-1">
-          <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
-            robots.txt
-            <Textarea
-              rows={4}
-              value={globalFields.robots_txt}
-              onChange={(event) => handleGlobalFieldChange("robots_txt", event.target.value)}
-              placeholder="User-agent: *&#10;Disallow: /wp-admin/"
-              className="min-h-[100px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
-            .htaccess
-            <Textarea
-              rows={6}
-              value={globalFields.htaccess}
-              onChange={(event) => handleGlobalFieldChange("htaccess", event.target.value)}
-              placeholder="# BEGIN WordPress..."
-              className="min-h-[150px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
-            />
-          </label>
-          <div className="flex items-center gap-2 pt-2">
-            <input
-              type="checkbox"
-              id="redirect_404"
-              checked={globalFields.redirect_404}
-              onChange={(e) => {
-                setGlobalFields((prev) => ({ ...prev, redirect_404: e.target.checked }));
-                setGlobalDirty(true);
-              }}
-              className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
-            />
-            <label htmlFor="redirect_404" className="text-sm text-slate-300 cursor-pointer select-none">
-              Увімкнути редірект 404 помилок на головну
+        <div className="space-y-3">
+          <FieldLabel>Global Code Injection</FieldLabel>
+          <div className="grid gap-4 md:grid-cols-1">
+            <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
+              Code after &lt;head&gt; open
+              <Textarea 
+                value={globalFields.global_code_after_head_open} 
+                onChange={(event) => handleGlobalFieldChange("global_code_after_head_open", event.target.value)} 
+                rows={4} 
+                placeholder="<script>...</script>" 
+                className="min-h-[100px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
+              Code after &lt;body&gt; open
+              <Textarea 
+                value={globalFields.global_code_after_body_open} 
+                onChange={(event) => handleGlobalFieldChange("global_code_after_body_open", event.target.value)} 
+                rows={4} 
+                placeholder="<noscript>...</noscript>" 
+                className="min-h-[100px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+              />
             </label>
           </div>
         </div>
-      </div>
-
-      <div className="space-y-3">
-        <FieldLabel>Кнопки</FieldLabel>
-        <div className="grid gap-4 md:grid-cols-3">
-          {BUTTON_TOKENS.map((button) => (
-            <label key={button.token} className="space-y-2 text-xs font-semibold text-slate-400">
-              {button.label}
-              <Input
-                value={buttonCopy[button.token] ?? ""}
-                onChange={(event) => handleButtonCopyChange(button.token, event.target.value)}
-                placeholder={button.placeholder}
+        <div className="space-y-3">
+          <FieldLabel>Медіа</FieldLabel>
+          <div className="grid gap-4 md:grid-cols-2">
+            <MediaUploadInput websiteUuid={site.uuid}
+              label="Favicon"
+              value={globalFields.favicon}
+              onChange={(val) => handleGlobalFieldChange("favicon", val)}
+              placeholder="https://cdn.brand.com/favicon.png"
+              pathPrefix={`${site.uuid}-favicon`}
+            />
+            <MediaUploadInput websiteUuid={site.uuid}
+              label="Логотип URL"
+              value={globalFields.logo}
+              onChange={(val) => handleGlobalFieldChange("logo", val)}
+              placeholder="https://cdn.brand.com/logo.svg"
+              pathPrefix={`${site.uuid}-logo`}
+            />
+            <MediaUploadInput websiteUuid={site.uuid}
+              label="Банер Hero"
+              value={globalFields.banner}
+              onChange={(val) => handleGlobalFieldChange("banner", val)}
+              placeholder="https://cdn.brand.com/hero.png"
+              pathPrefix={`${site.uuid}-banner`}
+            />
+            <MediaUploadInput websiteUuid={site.uuid}
+              label="Банер Hero (Mobile)"
+              value={globalFields.banner_mobile}
+              onChange={(val) => handleGlobalFieldChange("banner_mobile", val)}
+              placeholder="https://cdn.brand.com/hero-mobile.png"
+              pathPrefix={`${site.uuid}-banner-mobile`}
+            />
+            <MediaUploadInput websiteUuid={site.uuid}
+              label="Зображення 1"
+              value={globalFields.image_1}
+              onChange={(val) => handleGlobalFieldChange("image_1", val)}
+              placeholder="https://cdn.brand.com/image1.jpg"
+              pathPrefix={`${site.uuid}-image-1`}
+            />
+            <MediaUploadInput websiteUuid={site.uuid}
+              label="Зображення 2"
+              value={globalFields.image_2}
+              onChange={(val) => handleGlobalFieldChange("image_2", val)}
+              placeholder="https://cdn.brand.com/image2.jpg"
+              pathPrefix={`${site.uuid}-image-2`}
+            />
+            <MediaUploadInput websiteUuid={site.uuid}
+              label="Зображення 3"
+              value={globalFields.image_3}
+              onChange={(val) => handleGlobalFieldChange("image_3", val)}
+              placeholder="https://cdn.brand.com/image3.jpg"
+              pathPrefix={`${site.uuid}-image-3`}
+            />
+            <MediaUploadInput websiteUuid={site.uuid}
+              label="Зображення 4"
+              value={globalFields.image_4}
+              onChange={(val) => handleGlobalFieldChange("image_4", val)}
+              placeholder="https://cdn.brand.com/image4.jpg"
+              pathPrefix={`${site.uuid}-image-4`}
+            />
+          </div>
+        </div>
+        <div className="space-y-3">
+          <FieldLabel>Серверні налаштування</FieldLabel>
+          <div className="grid gap-4 md:grid-cols-1">
+            <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
+              robots.txt
+              <Textarea
+                rows={4}
+                value={globalFields.robots_txt}
+                onChange={(event) => handleGlobalFieldChange("robots_txt", event.target.value)}
+                placeholder="User-agent: *&#10;Disallow: /wp-admin/"
+                className="min-h-[100px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
               />
             </label>
-          ))}
+            <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
+              .htaccess
+              <Textarea
+                rows={6}
+                value={globalFields.htaccess}
+                onChange={(event) => handleGlobalFieldChange("htaccess", event.target.value)}
+                placeholder="# BEGIN WordPress..."
+                className="min-h-[150px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+              />
+            </label>
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                id="redirect_404"
+                checked={globalFields.redirect_404}
+                onChange={(e) => {
+                  setGlobalFields((prev) => ({ ...prev, redirect_404: e.target.checked }));
+                  setGlobalDirty(true);
+                }}
+                className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
+              />
+              <label htmlFor="redirect_404" className="text-sm text-slate-300 cursor-pointer select-none">
+                Увімкнути редірект 404 помилок на головну
+              </label>
+            </div>
+          </div>
         </div>
-      </div>
+
+        <div className="space-y-3">
+          <FieldLabel>Кнопки</FieldLabel>
+          <div className="grid gap-4 md:grid-cols-3">
+            {BUTTON_TOKENS.map((button) => (
+              <label key={button.token} className="space-y-2 text-xs font-semibold text-slate-400">
+                {button.label}
+                <Input
+                  value={buttonCopy[button.token] ?? ""}
+                  onChange={(event) => handleButtonCopyChange(button.token, event.target.value)}
+                  placeholder={button.placeholder}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      </CardContent>
     </Card>
   );
 
   const renderEditSiteframe = (mode: "raw" | "structured") => (
-    <Card className="space-y-4">
-      <div>
+    <Card>
+      <CardHeader>
         <FieldLabel>Siteframe</FieldLabel>
-        <h2 className="text-lg font-semibold text-white">{mode === "raw" ? "Редактор коду" : "Редактор сторінок"}</h2>
-        <p className="text-xs text-slate-400">
+        <CardTitle className="text-lg font-semibold text-white">{mode === "raw" ? "Редактор коду" : "Редактор сторінок"}</CardTitle>
+        <CardDescription>
           {mode === "raw"
             ? "Повний payload у стилі VS Code з підсвіткою рядків."
             : "Структурований редактор сторінок, блоків і глобальних частин."}
-        </p>
-      </div>
-      <PayloadPreview payload={siteframeValue} onPayloadChange={handlePayloadChange} mode={mode} />
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <PayloadPreview payload={siteframeValue} onPayloadChange={handlePayloadChange} mode={mode} />
+      </CardContent>
     </Card>
   );
 
@@ -1301,161 +1323,163 @@ export function WebsiteDetailTabs({
         ? "text-emerald-300"
         : "text-slate-500";
     return (
-      <Card className="space-y-5">
-        <div>
+      <Card>
+        <CardHeader>
           <FieldLabel>Перегенерація</FieldLabel>
-          <h2 className="text-lg font-semibold text-white">Повна перебілдка</h2>
-          <p className="text-xs text-slate-400">Надішліть дані до n8n, щоби перестворити сайт на основі свіжих полів.</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="space-y-2 text-xs font-semibold text-slate-400">
-            Видавець
-            <Input
-              value={getRegenerationField("publisher")}
-              onChange={(event) => handleRegenerationFieldChange("publisher", event.target.value)}
-              placeholder="bizzo-casino-pl.com"
-            />
-          </label>
-          <label className="space-y-2 text-xs font-semibold text-slate-400">
-            Повна назва бренду
-            <Input
-              value={getRegenerationField("brand_full")}
-              onChange={(event) => handleRegenerationFieldChange("brand_full", event.target.value)}
-              placeholder="Bizzo Casino"
-            />
-          </label>
-          <label className="space-y-2 text-xs font-semibold text-slate-400">
-            Бренд ключ
-            <Input
-              value={getRegenerationField("brand_key")}
-              onChange={(event) => handleRegenerationFieldChange("brand_key", event.target.value)}
-              placeholder="Bizzo"
-            />
-          </label>
-          <label className="space-y-2 text-xs font-semibold text-slate-400">
-            Цільовий сайт
-            <Input
-              value={getRegenerationField("target_site")}
-              onChange={(event) => handleRegenerationFieldChange("target_site", event.target.value)}
-              placeholder="https://bizzo-casino-pl.com"
-            />
-          </label>
-          <label className="space-y-2 text-xs font-semibold text-slate-400">
-            Локаль інтерфейсу
-            <Input
-              value={getRegenerationField("locale")}
-              onChange={(event) => handleRegenerationFieldChange("locale", event.target.value)}
-              placeholder={globalFields.locale || "uk-UA"}
-            />
-          </label>
-        </div>
-        <label className="space-y-2 text-xs font-semibold text-slate-400">
-          Стиль
-          <Textarea
-            value={getRegenerationField("style")}
-            onChange={(event) => handleRegenerationFieldChange("style", event.target.value)}
-            rows={4}
-            placeholder="Темна тема, фон фіолетовий #2В1234, акценти колір жовтий #FDCD0A, кнопки лише зелені linear-gradient(to bottom,#BCFF50,#08B83A). Шрифт Poppins,Arial"
-          />
-        </label>
-        <div className="space-y-3">
-          <FieldLabel>Медіа</FieldLabel>
+          <CardTitle className="text-lg font-semibold text-white">Повна перебілдка</CardTitle>
+          <CardDescription>Надішліть дані до n8n, щоби перестворити сайт на основі свіжих полів.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-8">
           <div className="grid gap-4 md:grid-cols-2">
-            <MediaUploadInput websiteUuid={site.uuid}
-              label="Favicon"
-              value={getRegenerationField("favicon")}
-              onChange={(val) => handleRegenerationFieldChange("favicon", val)}
-              placeholder={globalFields.favicon || "https://.../favicon.png"}
-              pathPrefix={`${site.uuid}-favicon`}
-            />
-            <MediaUploadInput websiteUuid={site.uuid}
-              label="Лого"
-              value={getRegenerationField("logo")}
-              onChange={(val) => handleRegenerationFieldChange("logo", val)}
-              placeholder={globalFields.logo || "https://.../logo.png"}
-              pathPrefix={`${site.uuid}-logo`}
-            />
-            <MediaUploadInput websiteUuid={site.uuid}
-              label="Банер"
-              value={getRegenerationField("banner")}
-              onChange={(val) => handleRegenerationFieldChange("banner", val)}
-              placeholder={globalFields.banner || "https://.../banner.jpg"}
-              pathPrefix={`${site.uuid}-banner`}
-            />
-            <MediaUploadInput websiteUuid={site.uuid}
-              label="Банер мобільний"
-              value={getRegenerationField("banner_mobile")}
-              onChange={(val) => handleRegenerationFieldChange("banner_mobile", val)}
-              placeholder={globalFields.banner_mobile || "https://.../banner-mobile.jpg"}
-              pathPrefix={`${site.uuid}-banner-mobile`}
-            />
-            <MediaUploadInput websiteUuid={site.uuid}
-              label="Зображення 1"
-              value={getRegenerationField("image_1")}
-              onChange={(val) => handleRegenerationFieldChange("image_1", val)}
-              placeholder={globalFields.image_1 || "https://.../image1.jpg"}
-              pathPrefix={`${site.uuid}-image-1`}
-            />
-            <MediaUploadInput websiteUuid={site.uuid}
-              label="Зображення 2"
-              value={getRegenerationField("image_2")}
-              onChange={(val) => handleRegenerationFieldChange("image_2", val)}
-              placeholder={globalFields.image_2 || "https://.../image2.jpg"}
-              pathPrefix={`${site.uuid}-image-2`}
-            />
-            <MediaUploadInput websiteUuid={site.uuid}
-              label="Зображення 3"
-              value={getRegenerationField("image_3")}
-              onChange={(val) => handleRegenerationFieldChange("image_3", val)}
-              placeholder={globalFields.image_3 || "https://.../image3.jpg"}
-              pathPrefix={`${site.uuid}-image-3`}
-            />
-            <MediaUploadInput websiteUuid={site.uuid}
-              label="Зображення 4"
-              value={getRegenerationField("image_4")}
-              onChange={(val) => handleRegenerationFieldChange("image_4", val)}
-              placeholder={globalFields.image_4 || "https://.../image4.jpg"}
-              pathPrefix={`${site.uuid}-image-4`}
-            />
-          </div>
-        </div>
-        <div className="space-y-3">
-          <FieldLabel>Кнопки</FieldLabel>
-          <div className="grid gap-4 md:grid-cols-3">
             <label className="space-y-2 text-xs font-semibold text-slate-400">
-              Кнопка Вхід Текст
+              Видавець
               <Input
-                value={getRegenerationField("login_button_text")}
-                onChange={(event) => handleRegenerationFieldChange("login_button_text", event.target.value)}
-                placeholder={buttonCopy.login_btn || "Увійти"}
+                value={getRegenerationField("publisher")}
+                onChange={(event) => handleRegenerationFieldChange("publisher", event.target.value)}
+                placeholder="bizzo-casino-pl.com"
               />
             </label>
             <label className="space-y-2 text-xs font-semibold text-slate-400">
-              Кнопка Реєстрація Текст
+              Повна назва бренду
               <Input
-                value={getRegenerationField("register_button_text")}
-                onChange={(event) => handleRegenerationFieldChange("register_button_text", event.target.value)}
-                placeholder={buttonCopy.register_btn || "Реєстрація"}
+                value={getRegenerationField("brand_full")}
+                onChange={(event) => handleRegenerationFieldChange("brand_full", event.target.value)}
+                placeholder="Bizzo Casino"
               />
             </label>
             <label className="space-y-2 text-xs font-semibold text-slate-400">
-              Кнопка Бонус Текст
+              Бренд ключ
               <Input
-                value={getRegenerationField("bonus_button_text")}
-                onChange={(event) => handleRegenerationFieldChange("bonus_button_text", event.target.value)}
-                placeholder={buttonCopy.bonus_btn || "Отримати бонус"}
+                value={getRegenerationField("brand_key")}
+                onChange={(event) => handleRegenerationFieldChange("brand_key", event.target.value)}
+                placeholder="Bizzo"
+              />
+            </label>
+            <label className="space-y-2 text-xs font-semibold text-slate-400">
+              Цільовий сайт
+              <Input
+                value={getRegenerationField("target_site")}
+                onChange={(event) => handleRegenerationFieldChange("target_site", event.target.value)}
+                placeholder="https://bizzo-casino-pl.com"
+              />
+            </label>
+            <label className="space-y-2 text-xs font-semibold text-slate-400">
+              Локаль інтерфейсу
+              <Input
+                value={getRegenerationField("locale")}
+                onChange={(event) => handleRegenerationFieldChange("locale", event.target.value)}
+                placeholder={globalFields.locale || "uk-UA"}
               />
             </label>
           </div>
-        </div>
-        <div className="space-y-2 sm:flex sm:items-center sm:gap-4 sm:space-y-0">
-          <Button type="button" onClick={handleRegenerationClick} disabled={isSubmitDisabled} className="w-full sm:w-auto">
-            {isRegenerating ? "Запуск…" : "Запустити перегенерацію"}
-          </Button>
-          <p className={`text-xs ${statusTone}`}>
-            {regenerateError || regenerateMessage || "Перевірте дані та підтвердіть перед запуском."}
-          </p>
-        </div>
+          <label className="space-y-2 text-xs font-semibold text-slate-400 block">
+            Стиль
+            <Textarea
+              value={getRegenerationField("style")}
+              onChange={(event) => handleRegenerationFieldChange("style", event.target.value)}
+              rows={4}
+              placeholder="Темна тема, фон фіолетовий #2В1234, акценти колір жовтий #FDCD0A, кнопки лише зелені linear-gradient(to bottom,#BCFF50,#08B83A). Шрифт Poppins,Arial"
+            />
+          </label>
+          <div className="space-y-3">
+            <FieldLabel>Медіа</FieldLabel>
+            <div className="grid gap-4 md:grid-cols-2">
+              <MediaUploadInput websiteUuid={site.uuid}
+                label="Favicon"
+                value={getRegenerationField("favicon")}
+                onChange={(val) => handleRegenerationFieldChange("favicon", val)}
+                placeholder={globalFields.favicon || "https://.../favicon.png"}
+                pathPrefix={`${site.uuid}-favicon`}
+              />
+              <MediaUploadInput websiteUuid={site.uuid}
+                label="Лого"
+                value={getRegenerationField("logo")}
+                onChange={(val) => handleRegenerationFieldChange("logo", val)}
+                placeholder={globalFields.logo || "https://.../logo.png"}
+                pathPrefix={`${site.uuid}-logo`}
+              />
+              <MediaUploadInput websiteUuid={site.uuid}
+                label="Банер"
+                value={getRegenerationField("banner")}
+                onChange={(val) => handleRegenerationFieldChange("banner", val)}
+                placeholder={globalFields.banner || "https://.../banner.jpg"}
+                pathPrefix={`${site.uuid}-banner`}
+              />
+              <MediaUploadInput websiteUuid={site.uuid}
+                label="Банер мобільний"
+                value={getRegenerationField("banner_mobile")}
+                onChange={(val) => handleRegenerationFieldChange("banner_mobile", val)}
+                placeholder={globalFields.banner_mobile || "https://.../banner-mobile.jpg"}
+                pathPrefix={`${site.uuid}-banner-mobile`}
+              />
+              <MediaUploadInput websiteUuid={site.uuid}
+                label="Зображення 1"
+                value={getRegenerationField("image_1")}
+                onChange={(val) => handleRegenerationFieldChange("image_1", val)}
+                placeholder={globalFields.image_1 || "https://.../image1.jpg"}
+                pathPrefix={`${site.uuid}-image-1`}
+              />
+              <MediaUploadInput websiteUuid={site.uuid}
+                label="Зображення 2"
+                value={getRegenerationField("image_2")}
+                onChange={(val) => handleRegenerationFieldChange("image_2", val)}
+                placeholder={globalFields.image_2 || "https://.../image2.jpg"}
+                pathPrefix={`${site.uuid}-image-2`}
+              />
+              <MediaUploadInput websiteUuid={site.uuid}
+                label="Зображення 3"
+                value={getRegenerationField("image_3")}
+                onChange={(val) => handleRegenerationFieldChange("image_3", val)}
+                placeholder={globalFields.image_3 || "https://.../image3.jpg"}
+                pathPrefix={`${site.uuid}-image-3`}
+              />
+              <MediaUploadInput websiteUuid={site.uuid}
+                label="Зображення 4"
+                value={getRegenerationField("image_4")}
+                onChange={(val) => handleRegenerationFieldChange("image_4", val)}
+                placeholder={globalFields.image_4 || "https://.../image4.jpg"}
+                pathPrefix={`${site.uuid}-image-4`}
+              />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <FieldLabel>Кнопки</FieldLabel>
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="space-y-2 text-xs font-semibold text-slate-400">
+                Кнопка Вхід Текст
+                <Input
+                  value={getRegenerationField("login_button_text")}
+                  onChange={(event) => handleRegenerationFieldChange("login_button_text", event.target.value)}
+                  placeholder={buttonCopy.login_btn || "Увійти"}
+                />
+              </label>
+              <label className="space-y-2 text-xs font-semibold text-slate-400">
+                Кнопка Реєстрація Текст
+                <Input
+                  value={getRegenerationField("register_button_text")}
+                  onChange={(event) => handleRegenerationFieldChange("register_button_text", event.target.value)}
+                  placeholder={buttonCopy.register_btn || "Реєстрація"}
+                />
+              </label>
+              <label className="space-y-2 text-xs font-semibold text-slate-400">
+                Кнопка Бонус Текст
+                <Input
+                  value={getRegenerationField("bonus_button_text")}
+                  onChange={(event) => handleRegenerationFieldChange("bonus_button_text", event.target.value)}
+                  placeholder={buttonCopy.bonus_btn || "Отримати бонус"}
+                />
+              </label>
+            </div>
+          </div>
+          <div className="space-y-2 sm:flex sm:items-center sm:gap-4 sm:space-y-0">
+            <Button type="button" onClick={handleRegenerationClick} disabled={isSubmitDisabled} className="w-full sm:w-auto">
+              {isRegenerating ? "Запуск…" : "Запустити перегенерацію"}
+            </Button>
+            <p className={`text-xs ${statusTone}`}>
+              {regenerateError || regenerateMessage || "Перевірте дані та підтвердіть перед запуском."}
+            </p>
+          </div>
+        </CardContent>
       </Card>
     );
   };
@@ -1466,136 +1490,138 @@ export function WebsiteDetailTabs({
     const statusTone = redeployError ? "text-red-400" : redeployMessage ? "text-emerald-300" : "text-slate-500";
 
     return (
-      <Card className="space-y-6">
-        <div className="space-y-1">
+      <Card>
+        <CardHeader>
           <FieldLabel>Редеплой</FieldLabel>
-          <h2 className="text-lg font-semibold text-white">Повторне створення сайту</h2>
-          <p className="text-xs text-slate-400">
+          <CardTitle className="text-lg font-semibold text-white">Повторне створення сайту</CardTitle>
+          <CardDescription>
             Сервіс видалить поточний деплой і створить сайт заново. Поля нижче повторюють форму створення сайту, окрім домену –
             використовуємо {globalFields.domain || site.domain || "вказаний домен"}.
-          </p>
-        </div>
+          </CardDescription>
+        </CardHeader>
 
-        <form className="space-y-6" onSubmit={handleRedeploySubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-xs font-semibold text-slate-400">
-              Видавець
-              <Input
-                value={getRedeployField("publisher")}
-                onChange={(event) => handleRedeployFieldChange("publisher", event.target.value)}
-                placeholder="bizzo-casino-pl.com"
-              />
-            </label>
-            <label className="space-y-2 text-xs font-semibold text-slate-400">
-              Повна назва бренду
-              <Input
-                value={getRedeployField("brand_full")}
-                onChange={(event) => handleRedeployFieldChange("brand_full", event.target.value)}
-                placeholder="Bizzo Casino"
-              />
-            </label>
-            <label className="space-y-2 text-xs font-semibold text-slate-400">
-              Бренд ключ
-              <Input
-                value={getRedeployField("brand_key")}
-                onChange={(event) => handleRedeployFieldChange("brand_key", event.target.value)}
-                placeholder="Bizzo"
-              />
-            </label>
-            <label className="space-y-2 text-xs font-semibold text-slate-400">
-              Цільовий сайт
-              <Input
-                value={getRedeployField("target_site")}
-                onChange={(event) => handleRedeployFieldChange("target_site", event.target.value)}
-                placeholder="https://bizzo-casino-pl.com"
-              />
-            </label>
-            <label className="space-y-2 text-xs font-semibold text-slate-400">
-              Реферальне посилання
-              <Input
-                value={getRedeployField("pretty_link")}
-                onChange={(event) => handleRedeployFieldChange("pretty_link", event.target.value)}
-                placeholder="https://partners.brand.com/?ref=123"
-              />
-            </label>
-            <label className="space-y-2 text-xs font-semibold text-slate-400">
-              Локаль інтерфейсу
-              <Input
-                value={getRedeployField("locale")}
-                onChange={(event) => handleRedeployFieldChange("locale", event.target.value)}
-                placeholder={globalFields.locale || "uk-UA"}
-              />
-            </label>
-          </div>
-
-          <label className="space-y-2 text-xs font-semibold text-slate-400">
-            Стиль
-            <Textarea
-              rows={4}
-              value={getRedeployField("style")}
-              onChange={(event) => handleRedeployFieldChange("style", event.target.value)}
-              placeholder="Темна тема, фон фіолетовий #2B1234, акценти жовті #FDCD0A..."
-            />
-          </label>
-
-          <div className="space-y-3">
-            <FieldLabel>Медіа</FieldLabel>
+        <CardContent>
+          <form className="space-y-6" onSubmit={handleRedeploySubmit}>
             <div className="grid gap-4 md:grid-cols-2">
-              {REDEPLOY_MEDIA_FIELDS.map(({ key, label }) => (
-                <MediaUploadInput websiteUuid={site.uuid}
-                  key={key}
-                  label={label}
-                  value={getRedeployField(key)}
-                  onChange={(val) => handleRedeployFieldChange(key, val)}
-                  placeholder={String(globalFields[key as keyof GlobalFields] || `https://cdn.site/${String(key)}.jpg`)}
-                  pathPrefix={`${site.uuid}-redeploy-${String(key)}`}
+              <label className="space-y-2 text-xs font-semibold text-slate-400">
+                Видавець
+                <Input
+                  value={getRedeployField("publisher")}
+                  onChange={(event) => handleRedeployFieldChange("publisher", event.target.value)}
+                  placeholder="bizzo-casino-pl.com"
                 />
-              ))}
+              </label>
+              <label className="space-y-2 text-xs font-semibold text-slate-400">
+                Повна назва бренду
+                <Input
+                  value={getRedeployField("brand_full")}
+                  onChange={(event) => handleRedeployFieldChange("brand_full", event.target.value)}
+                  placeholder="Bizzo Casino"
+                />
+              </label>
+              <label className="space-y-2 text-xs font-semibold text-slate-400">
+                Бренд ключ
+                <Input
+                  value={getRedeployField("brand_key")}
+                  onChange={(event) => handleRedeployFieldChange("brand_key", event.target.value)}
+                  placeholder="Bizzo"
+                />
+              </label>
+              <label className="space-y-2 text-xs font-semibold text-slate-400">
+                Цільовий сайт
+                <Input
+                  value={getRedeployField("target_site")}
+                  onChange={(event) => handleRedeployFieldChange("target_site", event.target.value)}
+                  placeholder="https://bizzo-casino-pl.com"
+                />
+              </label>
+              <label className="space-y-2 text-xs font-semibold text-slate-400">
+                Реферальне посилання
+                <Input
+                  value={getRedeployField("pretty_link")}
+                  onChange={(event) => handleRedeployFieldChange("pretty_link", event.target.value)}
+                  placeholder="https://partners.brand.com/?ref=123"
+                />
+              </label>
+              <label className="space-y-2 text-xs font-semibold text-slate-400">
+                Локаль інтерфейсу
+                <Input
+                  value={getRedeployField("locale")}
+                  onChange={(event) => handleRedeployFieldChange("locale", event.target.value)}
+                  placeholder={globalFields.locale || "uk-UA"}
+                />
+              </label>
             </div>
-          </div>
 
-          <div className="space-y-3">
-            <FieldLabel>Кнопки</FieldLabel>
-            <div className="grid gap-4 md:grid-cols-3">
-              <label className="space-y-2 text-xs font-semibold text-slate-400">
-                Кнопка Вхід Текст
-                <Input
-                  value={getRedeployField("login_button_text")}
-                  onChange={(event) => handleRedeployFieldChange("login_button_text", event.target.value)}
-                  placeholder={buttonCopy.login_btn || "Увійти"}
-                />
-              </label>
-              <label className="space-y-2 text-xs font-semibold text-slate-400">
-                Кнопка Реєстрація Текст
-                <Input
-                  value={getRedeployField("register_button_text")}
-                  onChange={(event) => handleRedeployFieldChange("register_button_text", event.target.value)}
-                  placeholder={buttonCopy.register_btn || "Реєстрація"}
-                />
-              </label>
-              <label className="space-y-2 text-xs font-semibold text-slate-400">
-                Кнопка Бонус Текст
-                <Input
-                  value={getRedeployField("bonus_button_text")}
-                  onChange={(event) => handleRedeployFieldChange("bonus_button_text", event.target.value)}
-                  placeholder={buttonCopy.bonus_btn || "Отримати бонус"}
-                />
-              </label>
+            <label className="space-y-2 text-xs font-semibold text-slate-400 block">
+              Стиль
+              <Textarea
+                rows={4}
+                value={getRedeployField("style")}
+                onChange={(event) => handleRedeployFieldChange("style", event.target.value)}
+                placeholder="Темна тема, фон фіолетовий #2B1234, акценти жовті #FDCD0A..."
+              />
+            </label>
+
+            <div className="space-y-3">
+              <FieldLabel>Медіа</FieldLabel>
+              <div className="grid gap-4 md:grid-cols-2">
+                {REDEPLOY_MEDIA_FIELDS.map(({ key, label }) => (
+                  <MediaUploadInput websiteUuid={site.uuid}
+                    key={key}
+                    label={label}
+                    value={getRedeployField(key)}
+                    onChange={(val) => handleRedeployFieldChange(key, val)}
+                    placeholder={String(globalFields[key as keyof GlobalFields] || `https://cdn.site/${String(key)}.jpg`)}
+                    pathPrefix={`${site.uuid}-redeploy-${String(key)}`}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-2 text-sm">
-            <Button type="submit" disabled={disableSubmit || isRedeploying} className="w-full sm:w-auto">
-              {isRedeploying ? "Надсилання…" : "Запустити редеплой"}
-            </Button>
-            {missingRequired.length > 0 && !isRedeploying && (
-              <p className="text-xs text-amber-200">Заповніть усі обовʼязкові поля, виділені у верхній секції.</p>
-            )}
-            <p className={`text-xs ${statusTone}`}>
-              {redeployError || redeployMessage || "Дані підуть до n8n для повного перестворення сайту."}
-            </p>
-          </div>
-        </form>
+            <div className="space-y-3">
+              <FieldLabel>Кнопки</FieldLabel>
+              <div className="grid gap-4 md:grid-cols-3">
+                <label className="space-y-2 text-xs font-semibold text-slate-400">
+                  Кнопка Вхід Текст
+                  <Input
+                    value={getRedeployField("login_button_text")}
+                    onChange={(event) => handleRedeployFieldChange("login_button_text", event.target.value)}
+                    placeholder={buttonCopy.login_btn || "Увійти"}
+                  />
+                </label>
+                <label className="space-y-2 text-xs font-semibold text-slate-400">
+                  Кнопка Реєстрація Текст
+                  <Input
+                    value={getRedeployField("register_button_text")}
+                    onChange={(event) => handleRedeployFieldChange("register_button_text", event.target.value)}
+                    placeholder={buttonCopy.register_btn || "Реєстрація"}
+                  />
+                </label>
+                <label className="space-y-2 text-xs font-semibold text-slate-400">
+                  Кнопка Бонус Текст
+                  <Input
+                    value={getRedeployField("bonus_button_text")}
+                    onChange={(event) => handleRedeployFieldChange("bonus_button_text", event.target.value)}
+                    placeholder={buttonCopy.bonus_btn || "Отримати бонус"}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <Button type="submit" disabled={disableSubmit || isRedeploying} className="w-full sm:w-auto">
+                {isRedeploying ? "Надсилання…" : "Запустити редеплой"}
+              </Button>
+              {missingRequired.length > 0 && !isRedeploying && (
+                <p className="text-xs text-amber-200">Заповніть усі обовʼязкові поля, виділені у верхній секції.</p>
+              )}
+              <p className={`text-xs ${statusTone}`}>
+                {redeployError || redeployMessage || "Дані підуть до n8n для повного перестворення сайту."}
+              </p>
+            </div>
+          </form>
+        </CardContent>
       </Card>
     );
   };
@@ -1604,59 +1630,139 @@ export function WebsiteDetailTabs({
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         {statCards.map((stat) => (
-          <Card key={stat.label} className="rounded-3xl border border-white/5 bg-white/[0.03] p-4">
-            <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">{stat.label}</p>
-            <p className="truncate text-lg font-semibold text-white">{stat.value}</p>
+          <Card key={stat.label} className="rounded-3xl border border-white/5 bg-white/[0.03]">
+            <CardContent className="pt-6">
+              <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">{stat.label}</p>
+              <p className="truncate text-lg font-semibold text-white">{stat.value}</p>
+            </CardContent>
           </Card>
         ))}
       </div>
-      <Card className="space-y-3">
-        <FieldLabel>Швидкі шорткоди</FieldLabel>
-        <div className="grid gap-4 md:grid-cols-3">
-          {DASHBOARD_CARDS.filter((card) => isAdmin || card.id !== "auth").map((card) => (
-            <button
-              key={card.id}
-              type="button"
-              onClick={() => setActiveTab(card.id)}
-              className="relative flex h-full flex-col rounded-3xl border border-white/10 bg-slate-900/40 p-4 text-left transition hover:border-white/30"
-            >
-              <span className={`pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br ${card.accent}`} />
-              <span className="relative">
-                <p className="text-sm font-semibold text-white">{card.title}</p>
-                <p className="text-xs text-slate-300">{card.description}</p>
-                <span className="mt-6 inline-flex items-center text-xs font-semibold text-amber-200">
-                  Відкрити
-                  <svg className="ml-1 h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M6 4l4 4-4 4" />
-                  </svg>
+      <Card>
+        <CardHeader>
+          <FieldLabel>Швидкі шорткоди</FieldLabel>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            {DASHBOARD_CARDS.filter((card) => isAdmin || card.id !== "auth").map((card) => (
+              <button
+                key={card.id}
+                type="button"
+                onClick={() => setActiveTab(card.id)}
+                className="relative flex h-full flex-col rounded-3xl border border-white/10 bg-slate-900/40 p-4 text-left transition hover:border-white/30"
+              >
+                <span className={`pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-br ${card.accent}`} />
+                <span className="relative">
+                  <p className="text-sm font-semibold text-white">{card.title}</p>
+                  <p className="text-xs text-slate-300">{card.description}</p>
+                  <span className="mt-6 inline-flex items-center text-xs font-semibold text-amber-200">
+                    Відкрити
+                    <svg className="ml-1 h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M6 4l4 4-4 4" />
+                    </svg>
+                  </span>
                 </span>
-              </span>
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
+        </CardContent>
       </Card>
-      <Card className="space-y-3">
-        <FieldLabel>Посилання</FieldLabel>
-        <div className="text-sm text-slate-200">
-          <p>
-            Основне:
-            {" "}
-            {siteUrl ? (
-              <a href={siteUrl} target="_blank" rel="noreferrer" className="text-amber-300 underline">
-                {siteUrl}
-              </a>
-            ) : (
-              "невідоме"
-            )}
-          </p>
-          <p>Сервер UUID: {site.server_uuid ?? "немає"}</p>
-          <p>Створено: {formatDate(site.created_at)}</p>
-        </div>
+      <Card>
+        <CardHeader>
+          <FieldLabel>Посилання</FieldLabel>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-slate-200">
+            <p>
+              Основне:
+              {" "}
+              {siteUrl ? (
+                <a href={siteUrl} target="_blank" rel="noreferrer" className="text-amber-300 underline">
+                  {siteUrl}
+                </a>
+              ) : (
+                "невідоме"
+              )}
+            </p>
+            <p>Сервер UUID: {site.server_uuid ?? "немає"}</p>
+            <p>Створено: {formatDate(site.created_at)}</p>
+          </div>
+        </CardContent>
       </Card>
     </div>
   );
 
+  const renderAnalytics = () => (
+    <div className="space-y-6">
+      <Card className="bg-slate-900 border-slate-800">
+        <CardHeader>
+          <CardTitle className="text-slate-200">Налаштування SpySERP</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-400">Project ID</label>
+              <Input
+                value={globalFields.spyserp_project_id}
+                onChange={(e) => handleGlobalFieldChange("spyserp_project_id", e.target.value)}
+                placeholder="142194"
+                className="bg-slate-950 border-slate-800 text-slate-200"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-400">Domain ID</label>
+              <Input
+                value={globalFields.spyserp_domain_id}
+                onChange={(e) => handleGlobalFieldChange("spyserp_domain_id", e.target.value)}
+                placeholder="30171708"
+                className="bg-slate-950 border-slate-800 text-slate-200"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-400">Folder Name</label>
+              <Input
+                value={globalFields.spyserp_folder_name}
+                onChange={(e) => handleGlobalFieldChange("spyserp_folder_name", e.target.value)}
+                placeholder="UK"
+                className="bg-slate-950 border-slate-800 text-slate-200"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-400">Value Metric ID</label>
+              <Input
+                value={globalFields.spyserp_valuemetric_id}
+                onChange={(e) => handleGlobalFieldChange("spyserp_valuemetric_id", e.target.value)}
+                placeholder="866344"
+                className="bg-slate-950 border-slate-800 text-slate-200"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-400">Engine ID</label>
+              <Input
+                value={globalFields.spyserp_engine_id}
+                onChange={(e) => handleGlobalFieldChange("spyserp_engine_id", e.target.value)}
+                placeholder="16335"
+                className="bg-slate-950 border-slate-800 text-slate-200"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSaveClick} disabled={!globalDirty || isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Зберегти налаштування
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <SeoPositions websiteUuid={site.uuid} />
+    </div>
+  );
+
   const renderContent = () => {
+    if (activeTab === "analytics") {
+      return renderAnalytics();
+    }
     if (activeTab === "ai-assistant") {
       // Merge global fields and button copy for AI context
       const aiContextFields = {

@@ -1,9 +1,17 @@
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { supabaseClient } from "@/lib/supabase";
 import { statusLabels } from "@/lib/status-labels";
 import { checkAdminAccess } from "@/app/admin/actions";
 import { Shield, Link as LinkIcon } from "lucide-react";
+
+type WebsiteSeoStats = {
+  pos_1_3: number;
+  pos_4_5: number;
+  pos_6_10: number;
+  pos_11_30: number;
+  pos_31_100: number;
+};
 
 type Website = {
   uuid: string;
@@ -14,6 +22,7 @@ type Website = {
   created_at: string;
   updated_at: string;
   pretty_link: string | null;
+  seo_stats?: WebsiteSeoStats;
 };
 
 const STATUS_ORDER = ["active", "deploying", "updating", "generating", "error", "waiting"] as const;
@@ -75,7 +84,27 @@ const getWebsites = async (): Promise<{
     .select("uuid, domain, brand, environment_uuid, status, created_at, updated_at, pretty_link")
     .order("updated_at", { ascending: false });
 
-  return { data: (data ?? []) as Website[], error: error ?? null };
+  if (error) return { data: [], error };
+
+  const { data: seoStats } = await supabaseClient
+    .from("website_position_summary")
+    .select("*");
+
+  const websites = (data ?? []).map((site: any) => {
+    const stats = seoStats?.find((s: any) => s.website_id === site.uuid);
+    return {
+      ...site,
+      seo_stats: stats ? {
+        pos_1_3: stats.pos_1_3,
+        pos_4_5: stats.pos_4_5,
+        pos_6_10: stats.pos_6_10,
+        pos_11_30: stats.pos_11_30,
+        pos_31_100: stats.pos_31_100,
+      } : undefined
+    };
+  });
+
+  return { data: websites, error: null };
 };
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
@@ -182,38 +211,56 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
               const normalizedStatus = isStatusKey(site.status) ? site.status : "waiting";
 
               return (
-                <Card key={site.uuid} className="space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <Link href={`/websites/${site.uuid}`} className="text-lg font-semibold text-white hover:text-amber-400">
-                      {site.domain}
-                    </Link>
-                    <p className="text-xs text-slate-500">
-                      {site.brand ?? "Невідомий бренд"} · {site.environment_uuid ?? "Невідомий ідентифікатор середовища"}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-[11px] font-semibold ${statusStyles[normalizedStatus]}`}
-                  >
-                    {statusLabels[normalizedStatus] ?? normalizedStatus}
-                  </span>
-                </div>
-                <div className="grid gap-2 text-xs text-slate-300 sm:grid-cols-2">
-                  <p>Створено: {formatDate(site.created_at)}</p>
-                  <p>Оновлено: {formatDate(site.updated_at)}</p>
-                </div>
-                <div className="flex flex-wrap gap-3 text-xs text-slate-400">
-                  <span>
-                    {domainUrl ? (
-                      <a href={domainUrl} target="_blank" rel="noreferrer" className="text-amber-300 underline">
-                        {domainUrl}
-                      </a>
-                    ) : (
-                      "Адреса домену не налаштована"
+                <Card key={site.uuid}>
+                  <CardContent className="space-y-4 pt-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <Link href={`/websites/${site.uuid}`} className="text-lg font-semibold text-white hover:text-amber-400">
+                          {site.domain}
+                        </Link>
+                        <p className="text-xs text-slate-500">
+                          {site.brand ?? "Невідомий бренд"} · {site.environment_uuid ?? "Невідомий ідентифікатор середовища"}
+                        </p>
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-[11px] font-semibold ${statusStyles[normalizedStatus]}`}
+                      >
+                        {statusLabels[normalizedStatus] ?? normalizedStatus}
+                      </span>
+                    </div>
+                    <div className="grid gap-2 text-xs text-slate-300 sm:grid-cols-2">
+                      <p>Створено: {formatDate(site.created_at)}</p>
+                      <p>Оновлено: {formatDate(site.updated_at)}</p>
+                    </div>
+                    {site.seo_stats && (
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-200 rounded border border-emerald-500/20" title="Top 3">
+                          Top 3: <span className="font-bold">{site.seo_stats.pos_1_3}</span>
+                        </span>
+                        <span className="px-2 py-1 bg-emerald-500/10 text-emerald-300 rounded border border-emerald-500/10" title="Pos 4-10">
+                          4-10: <span className="font-bold">{site.seo_stats.pos_4_5 + site.seo_stats.pos_6_10}</span>
+                        </span>
+                        <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded border border-slate-700" title="Pos 11-30">
+                          11-30: <span className="font-bold">{site.seo_stats.pos_11_30}</span>
+                        </span>
+                        <span className="px-2 py-1 bg-slate-800/50 text-slate-400 rounded border border-slate-800" title="Pos 31-100">
+                          31-100: <span className="font-bold">{site.seo_stats.pos_31_100}</span>
+                        </span>
+                      </div>
                     )}
-                  </span>
-                  <span className="text-slate-500">UUID: {site.uuid}</span>
-                </div>
+                    <div className="flex flex-wrap gap-3 text-xs text-slate-400">
+                      <span>
+                        {domainUrl ? (
+                          <a href={domainUrl} target="_blank" rel="noreferrer" className="text-amber-300 underline">
+                            {domainUrl}
+                          </a>
+                        ) : (
+                          "Адреса домену не налаштована"
+                        )}
+                      </span>
+                      <span className="text-slate-500">UUID: {site.uuid}</span>
+                    </div>
+                  </CardContent>
                 </Card>
               );
             })}
