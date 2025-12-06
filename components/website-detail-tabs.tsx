@@ -101,6 +101,9 @@ type GlobalFields = {
   favicon: string;
   global_code_after_head_open: string;
   global_code_after_body_open: string;
+  robots_txt: string;
+  htaccess: string;
+  redirect_404: boolean;
 };
 
 type ButtonCopyState = Record<ButtonTokenId, string>;
@@ -219,6 +222,9 @@ const buildGlobalFields = (site: WebsiteDetailRecord): GlobalFields => ({
   favicon: site.favicon ?? "",
   global_code_after_head_open: site.global_code_after_head_open ?? "",
   global_code_after_body_open: site.global_code_after_body_open ?? "",
+  robots_txt: site.robots_txt ?? "",
+  htaccess: site.htaccess ?? "",
+  redirect_404: site.redirect_404 ?? true,
 });
 
 const buildButtonCopy = (site: WebsiteDetailRecord): ButtonCopyState => {
@@ -707,6 +713,9 @@ export function WebsiteDetailTabs({
           updateData.bonus_button_text = buttonCopy.bonus_btn;
           updateData.global_code_after_head_open = globalFields.global_code_after_head_open;
           updateData.global_code_after_body_open = globalFields.global_code_after_body_open;
+          updateData.robots_txt = globalFields.robots_txt;
+          updateData.htaccess = globalFields.htaccess;
+          updateData.redirect_404 = globalFields.redirect_404;
           if (globalFields.domain.trim()) updateData.domain = globalFields.domain.trim();
         }
         
@@ -753,7 +762,10 @@ export function WebsiteDetailTabs({
           default_status: "publish",
           pretty_link: globalFields.pretty_link || site.pretty_link,
           payload: (target === "siteframe" || target === "mixed") ? siteframeValue : (site.payload || ""),
-          global_options: currentGlobal
+          global_options: currentGlobal,
+          robots_txt: globalFields.robots_txt,
+          htaccess: globalFields.htaccess,
+          redirect_404: globalFields.redirect_404
         };
 
         const response = await fetch(syncUrl, {
@@ -1000,6 +1012,12 @@ export function WebsiteDetailTabs({
     setIfString("favicon");
     setIfString("global_code_after_head_open");
     setIfString("global_code_after_body_open");
+    setIfString("robots_txt");
+    setIfString("htaccess");
+    
+    if (typeof entryData.redirect_404 === 'boolean') {
+        newGlobalFields.redirect_404 = entryData.redirect_404;
+    }
 
     setGlobalFields(newGlobalFields);
     setGlobalDirty(true);
@@ -1196,6 +1214,47 @@ export function WebsiteDetailTabs({
           />
         </div>
       </div>
+      <div className="space-y-3">
+        <FieldLabel>Серверні налаштування</FieldLabel>
+        <div className="grid gap-4 md:grid-cols-1">
+          <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
+            robots.txt
+            <Textarea
+              rows={4}
+              value={globalFields.robots_txt}
+              onChange={(event) => handleGlobalFieldChange("robots_txt", event.target.value)}
+              placeholder="User-agent: *&#10;Disallow: /wp-admin/"
+              className="min-h-[100px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+            />
+          </label>
+          <label className="flex flex-col gap-2 text-xs font-semibold text-slate-400">
+            .htaccess
+            <Textarea
+              rows={6}
+              value={globalFields.htaccess}
+              onChange={(event) => handleGlobalFieldChange("htaccess", event.target.value)}
+              placeholder="# BEGIN WordPress..."
+              className="min-h-[150px] w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 px-3 py-2 text-xs font-mono text-white placeholder:text-slate-500 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400"
+            />
+          </label>
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              type="checkbox"
+              id="redirect_404"
+              checked={globalFields.redirect_404}
+              onChange={(e) => {
+                setGlobalFields((prev) => ({ ...prev, redirect_404: e.target.checked }));
+                setGlobalDirty(true);
+              }}
+              className="h-4 w-4 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20"
+            />
+            <label htmlFor="redirect_404" className="text-sm text-slate-300 cursor-pointer select-none">
+              Увімкнути редірект 404 помилок на головну
+            </label>
+          </div>
+        </div>
+      </div>
+
       <div className="space-y-3">
         <FieldLabel>Кнопки</FieldLabel>
         <div className="grid gap-4 md:grid-cols-3">
@@ -1488,7 +1547,7 @@ export function WebsiteDetailTabs({
                   label={label}
                   value={getRedeployField(key)}
                   onChange={(val) => handleRedeployFieldChange(key, val)}
-                  placeholder={globalFields[key as keyof GlobalFields] || `https://cdn.site/${String(key)}.jpg`}
+                  placeholder={String(globalFields[key as keyof GlobalFields] || `https://cdn.site/${String(key)}.jpg`)}
                   pathPrefix={`${site.uuid}-redeploy-${String(key)}`}
                 />
               ))}
@@ -1643,9 +1702,9 @@ export function WebsiteDetailTabs({
               // Update Button Copy State
               setButtonCopy((prev) => ({
                 ...prev,
-                ...(login_button_text !== undefined && { login_btn: login_button_text }),
-                ...(register_button_text !== undefined && { register_btn: register_button_text }),
-                ...(bonus_button_text !== undefined && { bonus_btn: bonus_button_text }),
+                ...(typeof login_button_text === 'string' && { login_btn: login_button_text }),
+                ...(typeof register_button_text === 'string' && { register_btn: register_button_text }),
+                ...(typeof bonus_button_text === 'string' && { bonus_btn: bonus_button_text }),
               }));
 
               setGlobalDirty(true);

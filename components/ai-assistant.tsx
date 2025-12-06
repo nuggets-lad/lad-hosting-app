@@ -25,7 +25,10 @@ type GlobalFields = {
   favicon: string;
   global_code_after_head_open: string;
   global_code_after_body_open: string;
-  [key: string]: string | undefined;
+  robots_txt: string;
+  htaccess: string;
+  redirect_404: boolean;
+  [key: string]: string | boolean | undefined;
 };
 
 interface AiAssistantProps {

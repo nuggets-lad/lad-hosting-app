@@ -34,6 +34,9 @@ export type WebsiteDetailRecord = {
   style: string | null;
   global_code_after_head_open: string | null;
   global_code_after_body_open: string | null;
+  robots_txt: string | null;
+  htaccess: string | null;
+  redirect_404: boolean | null;
 };
 
 export type WebsiteHistoryField = {
