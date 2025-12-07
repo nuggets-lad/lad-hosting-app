@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -304,8 +306,17 @@ export async function POST(req: NextRequest) {
   const url = new URL(req.url);
   const apiKey = url.searchParams.get("key");
   
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && apiKey !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const isCronAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}` || apiKey === process.env.CRON_SECRET;
+
+  if (!isCronAuthorized) {
+    const cookieStore = await cookies();
+    // @ts-ignore
+    const supabaseAuth = createRouteHandlerClient({ cookies: () => cookieStore });
+    const { data: { session } } = await supabaseAuth.auth.getSession();
+    
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   const body = await req.json().catch(() => ({}));
