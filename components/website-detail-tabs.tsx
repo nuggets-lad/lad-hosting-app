@@ -1009,9 +1009,9 @@ export function WebsiteDetailTabs({
     
     const setIfString = (key: keyof GlobalFields) => {
       if (typeof entryData[key] === 'string') {
-        newGlobalFields[key] = entryData[key] as string;
+        (newGlobalFields as any)[key] = entryData[key] as string;
       } else if (entryData[key] === null) {
-         newGlobalFields[key] = "";
+         (newGlobalFields as any)[key] = "";
       }
     };
 

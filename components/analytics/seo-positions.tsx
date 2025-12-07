@@ -102,7 +102,7 @@ export function SeoPositions({ websiteUuid }: SeoPositionsProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Пошукові позиції</h3>
-        <Button onClick={handleSync} disabled={syncing} size="sm" variant="outline">
+        <Button onClick={handleSync} disabled={syncing} variant="outline" className="h-8 px-3 text-xs">
           {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           Оновити дані
         </Button>
