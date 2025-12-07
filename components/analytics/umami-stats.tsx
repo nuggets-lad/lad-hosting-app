@@ -8,9 +8,10 @@ import { Loader2, Users, Eye, Clock, Activity } from "lucide-react";
 
 type UmamiStatsProps = {
   websiteId: string;
+  headerActions?: React.ReactNode;
 };
 
-export function UmamiStats({ websiteId }: UmamiStatsProps) {
+export function UmamiStats({ websiteId, headerActions }: UmamiStatsProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +131,10 @@ export function UmamiStats({ websiteId }: UmamiStatsProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-2">
+          {headerActions}
+        </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-[180px] bg-slate-900 border-slate-800 text-slate-200">
             <SelectValue placeholder="Select range" />

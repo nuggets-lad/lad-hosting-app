@@ -475,7 +475,7 @@ export function WebsiteDetailTabs({
     }
   };
 
-  const saveTarget: SaveTarget | null = (activeTab === "edit-global") ? "global" : isSiteframeTab ? "siteframe" : activeTab === "ai-assistant" ? "mixed" : null;
+  const saveTarget: SaveTarget | null = (activeTab === "edit-global" || activeTab === "analytics") ? "global" : isSiteframeTab ? "siteframe" : activeTab === "ai-assistant" ? "mixed" : null;
   const disableSave = !saveTarget || isSaving || (saveTarget === "global" ? !globalDirty : saveTarget === "siteframe" ? !siteframeDirty : (!globalDirty && !siteframeDirty));
   const resetRegenerationStatus = () => {
     setRegenerateMessage(null);
@@ -1808,31 +1808,34 @@ export function WebsiteDetailTabs({
 
     return (
       <div className="space-y-6">
-        <div className="flex gap-2">
-          {globalFields.spyserp_project_id && (
-            <a
-              href={`https://spyserp.com/app/8556bee8/#project/${globalFields.spyserp_project_id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-slate-800 text-slate-200 hover:bg-slate-700 h-9 px-4 py-2"
-            >
-              Відкрити SpySERP
-            </a>
-          )}
-          {globalFields.umami_website_id && (
-            <a
-              href={`${umamiUrl}/websites/${globalFields.umami_website_id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-slate-800 text-slate-200 hover:bg-slate-700 h-9 px-4 py-2"
-            >
-              Відкрити Umami
-            </a>
-          )}
-        </div>
-
         {globalFields.umami_website_id ? (
-          <UmamiStats websiteId={globalFields.umami_website_id} />
+          <UmamiStats 
+            websiteId={globalFields.umami_website_id} 
+            headerActions={
+              <div className="flex gap-2">
+                {globalFields.spyserp_project_id && (
+                  <a
+                    href={`https://spyserp.com/app/8556bee8/#project/${globalFields.spyserp_project_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-slate-800 text-slate-200 hover:bg-slate-700 h-8 px-3"
+                  >
+                    SpySERP
+                  </a>
+                )}
+                {globalFields.umami_website_id && (
+                  <a
+                    href={`${umamiUrl}/websites/${globalFields.umami_website_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-slate-800 text-slate-200 hover:bg-slate-700 h-8 px-3"
+                  >
+                    Umami
+                  </a>
+                )}
+              </div>
+            }
+          />
         ) : (
           <Card className="bg-slate-900 border-slate-800">
             <CardContent className="flex flex-col items-center justify-center h-[300px] space-y-4">
@@ -2003,7 +2006,7 @@ export function WebsiteDetailTabs({
                 </Button>
               </div>
             )}
-            {saveTarget && (
+            {saveTarget && activeTab !== "analytics" && (
               <div className="space-y-2 sm:text-right">
                 <Button type="button" onClick={handleSaveClick} disabled={disableSave} className="w-full sm:w-auto">
                   {isSaving ? "Надсилання…" : "Зберегти"}
