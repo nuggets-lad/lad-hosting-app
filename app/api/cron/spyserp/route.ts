@@ -283,6 +283,14 @@ async function syncSpySerpData(website_uuid?: string) {
 }
 
 export async function GET(req: NextRequest) {
+  const authHeader = req.headers.get("authorization");
+  const url = new URL(req.url);
+  const apiKey = url.searchParams.get("key");
+  
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && apiKey !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const result = await syncSpySerpData();
     return NextResponse.json(result);
@@ -292,6 +300,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authHeader = req.headers.get("authorization");
+  const url = new URL(req.url);
+  const apiKey = url.searchParams.get("key");
+  
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}` && apiKey !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const { website_uuid } = body;
 
