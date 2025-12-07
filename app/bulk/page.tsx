@@ -1,8 +1,9 @@
 import { checkAdminAccess } from "@/app/admin/actions";
-import { QuickReferralEdit } from "@/components/quick-referral-edit";
+import { MassEditor } from "@/components/mass-editor";
 import { supabaseClient } from "@/lib/supabase";
-import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase-server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 type Website = {
   uuid: string;
@@ -14,6 +15,8 @@ type Website = {
   updated_at: string;
   pretty_link: string | null;
   api_key: string | null;
+  global_code_after_head_open: string | null;
+  global_code_after_body_open: string | null;
 };
 
 const getWebsites = async (): Promise<{
@@ -29,18 +32,21 @@ const getWebsites = async (): Promise<{
 
   const { data, error } = await supabaseClient
     .from("websites")
-    .select("uuid, domain, brand, environment_uuid, status, created_at, updated_at, pretty_link, api_key")
+    .select("uuid, domain, brand, environment_uuid, status, created_at, updated_at, pretty_link, api_key, global_code_after_head_open, global_code_after_body_open")
     .order("updated_at", { ascending: false });
 
   return { data: (data ?? []) as Website[], error: error ?? null };
 };
 
-export default async function ReferralsPage() {
-  const isAdmin = await checkAdminAccess();
-  if (!isAdmin) {
-    redirect("/");
+export default async function BulkPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
   }
 
+  const isAdmin = await checkAdminAccess();
   const { data: websites, error } = await getWebsites();
 
   return (
@@ -50,7 +56,7 @@ export default async function ReferralsPage() {
             <Link href="/" className="text-sm text-amber-300 hover:text-amber-200 transition">
                 ← Назад
             </Link>
-            <h1 className="text-2xl font-bold">Редактор реферальних посилань</h1>
+            <h1 className="text-2xl font-bold">Масовий редактор</h1>
         </div>
         
         {error && (
@@ -59,7 +65,7 @@ export default async function ReferralsPage() {
             </div>
         )}
 
-        <QuickReferralEdit websites={websites} />
+        <MassEditor websites={websites} isAdmin={isAdmin} />
       </div>
     </div>
   );

@@ -10,27 +10,29 @@ const SPYSERP_API_URL = "https://spyserp.com/panel/api";
 
 // Helper to fetch with retries or simple wrapper
 async function fetchSpySerp(params: Record<string, string>) {
-  const url = new URL(SPYSERP_API_URL);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-  // Add API key
-  if (SPYSERP_API_KEY) {
-    url.searchParams.append("key", SPYSERP_API_KEY);
-  }
-  
-  const res = await fetch(url.toString(), { method: "POST" });
+  const payload = {
+    token: SPYSERP_API_KEY,
+    ...params,
+  };
+
+  const res = await fetch(SPYSERP_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
   if (!res.ok) {
     throw new Error(`SpySERP API error: ${res.status} ${res.statusText}`);
   }
   return res.json();
 }
 
-export async function POST(req: NextRequest) {
+async function syncSpySerpData(website_uuid?: string) {
   if (!SPYSERP_API_KEY) {
-    return NextResponse.json({ error: "SPYSERP_API_KEY not configured" }, { status: 500 });
+    throw new Error("SPYSERP_API_KEY not configured");
   }
-
-  const body = await req.json().catch(() => ({}));
-  const { website_uuid } = body;
 
   let query = supabase.from("websites").select("*");
   if (website_uuid) {
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
   const { data: websites, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    throw new Error(error.message);
   }
 
   const results = [];
@@ -51,16 +53,61 @@ export async function POST(req: NextRequest) {
     if (!site.spyserp_project_id || !site.spyserp_domain_id) continue;
 
     try {
+      // --- 0. Fetch Project Columns to find Volume ID ---
+      const columnsData = await fetchSpySerp({
+        method: "projectColumns",
+        project_id: site.spyserp_project_id.toString(),
+      });
+      
+      // Always try to find the correct Volume column ID dynamically
+      let volumeColumnId = null;
+      if (columnsData.items) {
+        const volCol = columnsData.items.find((c: any) => c.description === "Volume");
+        if (volCol) {
+          volumeColumnId = volCol.id.toString();
+        }
+      }
+      // Fallback to saved ID if dynamic lookup failed (though unlikely)
+      if (!volumeColumnId) {
+         volumeColumnId = site.spyserp_valuemetric_id?.toString();
+      }
+
       // --- 1. Fetch Statistics (Positions) ---
+      // First, get the list of recent schedules (reports) to ensure we fetch the latest data
+      const schedulesData = await fetchSpySerp({
+        method: "projectSchedules",
+        project_id: site.spyserp_project_id.toString(),
+        page: "0",
+        pageSize: "5"
+      });
+
+      const recentSchedules = schedulesData.items
+        ?.filter((s: any) => s.status === 4) // 4 = completed successfully
+        ?.map((s: any) => s.id) || [];
+
+      if (recentSchedules.length === 0) {
+        console.log(`[SpySERP] No recent completed schedules found for ${site.uuid}`);
+        continue;
+      }
+
+      // Fetch stats for these specific schedules
       const statsData = await fetchSpySerp({
         method: "statistic",
         project_id: site.spyserp_project_id.toString(),
         domain: site.spyserp_domain_id.toString(),
         withcat: "1",
+        schedules: recentSchedules.join(",")
       });
 
+      console.log(`[SpySERP] Stats for ${site.uuid} (Schedules: ${recentSchedules.join(",")}):`, JSON.stringify(statsData).slice(0, 500));
+
       // Parse Stats
-      const container = statsData.data;
+      let container = statsData.data;
+      if (!container) {
+         // If no .data property, assume the response itself is the container (map of schedule_id -> array)
+         container = statsData;
+      }
+
       if (container && typeof container === 'object' && !Array.isArray(container)) {
         for (const [reportId, arr] of Object.entries(container)) {
           if (!Array.isArray(arr)) continue;
@@ -114,10 +161,12 @@ export async function POST(req: NextRequest) {
                   const arr = Array.isArray(payload) ? payload : [];
                   
                   const position = arr[0] != null && arr[0] !== '' ? Number(arr[0]) : null;
-                  const url = arr[1] ?? null;
+                  // Handle URL: SpySERP might return boolean false if no URL
+                  const url = (arr[1] && typeof arr[1] === 'string') ? arr[1] : null;
                   
                   if (position !== null) {
-                    await supabase.from("seo_daily_ranks").upsert({
+                    console.log(`[SpySERP] Saving rank: kw=${keyword_id} date=${date_key} pos=${position} engine=${engine_id}`);
+                    const { error: upsertError } = await supabase.from("seo_daily_ranks").upsert({
                       keyword_id,
                       date: date_key,
                       position,
@@ -125,6 +174,10 @@ export async function POST(req: NextRequest) {
                       engine_id,
                       folder: site.spyserp_folder_name
                     }, { onConflict: "keyword_id, date, engine_id" });
+
+                    if (upsertError) {
+                      console.error(`Error upserting rank for kw ${keyword_id}:`, upsertError);
+                    }
                   }
                 }
               }
@@ -147,6 +200,10 @@ export async function POST(req: NextRequest) {
           page: page.toString()
         });
 
+        if (page === 0) {
+           console.log(`[SpySERP] Volume Data (Page 0) for ${site.uuid}:`, JSON.stringify(volData).slice(0, 500));
+        }
+
         const items = volData.items || [];
         if (items.length === 0) {
           hasMore = false;
@@ -160,7 +217,7 @@ export async function POST(req: NextRequest) {
           page++;
         }
 
-        const metricId = site.spyserp_valuemetric_id?.toString();
+        const metricId = volumeColumnId;
         const engineId = site.spyserp_engine_id; // Default engine for volume?
         const dateKey = new Date().toISOString().slice(0, 10);
 
@@ -198,6 +255,10 @@ export async function POST(req: NextRequest) {
 
            const volRaw = (it.columnData && metricId) ? it.columnData[metricId] : undefined;
            const volume = volRaw ? Number(volRaw) : null;
+           
+           if (volume !== null) {
+             console.log(`[SpySERP] Saving volume: kw=${keyword_id} vol=${volume}`);
+           }
 
            if (volume !== null && engineId) {
              await supabase.from("seo_daily_volumes").upsert({
@@ -218,5 +279,26 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ results });
+  return { results };
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const result = await syncSpySerpData();
+    return NextResponse.json(result);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
+  const { website_uuid } = body;
+
+  try {
+    const result = await syncSpySerpData(website_uuid);
+    return NextResponse.json(result);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
 }

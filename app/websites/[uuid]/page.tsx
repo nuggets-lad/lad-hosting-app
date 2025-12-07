@@ -27,7 +27,7 @@ const fetchWebsite = async (uuid: string | undefined) => {
   const { data, error } = await supabaseClient
     .from("websites")
     .select(
-      "uuid, domain, brand, environment_uuid, status, payload, ref, pretty_link, created_at, updated_at, server_uuid, app_uuid, admin_slug, api_key, admin_user, admin_password, logo, banner, banner_mobile, image_1, image_2, image_3, image_4, favicon, locale, login_button_text, register_button_text, bonus_button_text, publisher, brand_full, brand_key, target_site, style, global_code_after_head_open, global_code_after_body_open, robots_txt, htaccess, redirect_404"
+      "uuid, domain, brand, environment_uuid, status, payload, ref, pretty_link, created_at, updated_at, server_uuid, app_uuid, admin_slug, api_key, admin_user, admin_password, logo, banner, banner_mobile, image_1, image_2, image_3, image_4, favicon, locale, login_button_text, register_button_text, bonus_button_text, publisher, brand_full, brand_key, target_site, style, global_code_after_head_open, global_code_after_body_open, robots_txt, htaccess, redirect_404, spyserp_project_id, spyserp_domain_id, spyserp_folder_name, spyserp_valuemetric_id, spyserp_engine_id, umami_website_id"
     )
     .eq("uuid", uuid)
     .single();
@@ -162,6 +162,7 @@ export default async function WebsitePage({ params }: { params: Promise<{ uuid: 
         statusDisplay={statusDisplay}
         environmentLabel={environmentLabel}
         isAdmin={isAdmin}
+        umamiUrl={process.env.UMAMI_URL ?? "https://umami.onepunch.team"}
       />
     </div>
   );

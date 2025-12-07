@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,9 +11,11 @@ import { PayloadPreview } from "@/components/payload-preview";
 import { MediaUploadInput } from "@/components/media-upload-input";
 import { AiAssistant, Message } from "@/components/ai-assistant";
 import { SeoPositions } from "@/components/analytics/seo-positions";
+import { SpySerpMasterSetup } from "@/components/analytics/spyserp-master-setup";
+import { UmamiStats } from "@/components/analytics/umami-stats";
 import { WebsiteDetailRecord, WebsiteHistoryEntry } from "@/lib/website-types";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { Loader2, RotateCcw } from "lucide-react";
+import { Loader2, RotateCcw, Settings } from "lucide-react";
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleString("en-US", { timeZone: "UTC", hour12: false });
@@ -37,6 +40,7 @@ type WebsiteDetailTabsProps = {
   statusDisplay: string;
   environmentLabel: string;
   isAdmin: boolean;
+  umamiUrl: string;
 };
 
 type ButtonField = "login_button_text" | "register_button_text" | "bonus_button_text";
@@ -111,6 +115,7 @@ type GlobalFields = {
   spyserp_folder_name: string;
   spyserp_valuemetric_id: string;
   spyserp_engine_id: string;
+  umami_website_id: string;
 };
 
 type ButtonCopyState = Record<ButtonTokenId, string>;
@@ -238,6 +243,7 @@ const buildGlobalFields = (site: WebsiteDetailRecord): GlobalFields => ({
   spyserp_folder_name: site.spyserp_folder_name ?? "",
   spyserp_valuemetric_id: site.spyserp_valuemetric_id?.toString() ?? "",
   spyserp_engine_id: site.spyserp_engine_id?.toString() ?? "",
+  umami_website_id: site.umami_website_id ?? "",
 });
 
 const buildButtonCopy = (site: WebsiteDetailRecord): ButtonCopyState => {
@@ -322,8 +328,11 @@ export function WebsiteDetailTabs({
   statusDisplay,
   environmentLabel,
   isAdmin,
+  umamiUrl,
 }: WebsiteDetailTabsProps) {
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams.get("tab") as TabId) || "overview";
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [globalFields, setGlobalFields] = useState<GlobalFields>(() => buildGlobalFields(site));
   const [buttonCopy, setButtonCopy] = useState<ButtonCopyState>(() => buildButtonCopy(site));
   const [siteframeValue, setSiteframeValue] = useState(site.payload ?? "");
@@ -344,6 +353,7 @@ export function WebsiteDetailTabs({
   const [isDisabling, setIsDisabling] = useState(false);
   const [disableMessage, setDisableMessage] = useState<string | null>(null);
   const [disableError, setDisableError] = useState<string | null>(null);
+  const [showAnalyticsSettings, setShowAnalyticsSettings] = useState(false);
   const [aiMessages, setAiMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -378,6 +388,7 @@ export function WebsiteDetailTabs({
     setDisableMessage(null);
     setDisableError(null);
     setIsDisabling(false);
+    setShowAnalyticsSettings(false);
     setAiMessages([
       {
         role: "assistant",
@@ -464,7 +475,7 @@ export function WebsiteDetailTabs({
     }
   };
 
-  const saveTarget: SaveTarget | null = activeTab === "edit-global" ? "global" : isSiteframeTab ? "siteframe" : activeTab === "ai-assistant" ? "mixed" : null;
+  const saveTarget: SaveTarget | null = (activeTab === "edit-global") ? "global" : isSiteframeTab ? "siteframe" : activeTab === "ai-assistant" ? "mixed" : null;
   const disableSave = !saveTarget || isSaving || (saveTarget === "global" ? !globalDirty : saveTarget === "siteframe" ? !siteframeDirty : (!globalDirty && !siteframeDirty));
   const resetRegenerationStatus = () => {
     setRegenerateMessage(null);
@@ -734,6 +745,7 @@ export function WebsiteDetailTabs({
           updateData.spyserp_folder_name = globalFields.spyserp_folder_name || null;
           updateData.spyserp_valuemetric_id = globalFields.spyserp_valuemetric_id ? Number(globalFields.spyserp_valuemetric_id) : null;
           updateData.spyserp_engine_id = globalFields.spyserp_engine_id ? Number(globalFields.spyserp_engine_id) : null;
+          updateData.umami_website_id = globalFields.umami_website_id || null;
           if (globalFields.domain.trim()) updateData.domain = globalFields.domain.trim();
         }
         
@@ -1692,72 +1704,149 @@ export function WebsiteDetailTabs({
     </div>
   );
 
-  const renderAnalytics = () => (
-    <div className="space-y-6">
-      <Card className="bg-slate-900 border-slate-800">
-        <CardHeader>
-          <CardTitle className="text-slate-200">Налаштування SpySERP</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Project ID</label>
-              <Input
-                value={globalFields.spyserp_project_id}
-                onChange={(e) => handleGlobalFieldChange("spyserp_project_id", e.target.value)}
-                placeholder="142194"
-                className="bg-slate-950 border-slate-800 text-slate-200"
-              />
+  const renderAnalytics = () => {
+    if (showAnalyticsSettings) {
+      return (
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <div>
+              <CardTitle className="text-slate-200">Налаштування Аналітики</CardTitle>
+              <CardDescription>Налаштуйте підключення до Umami та SpySERP.</CardDescription>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Domain ID</label>
-              <Input
-                value={globalFields.spyserp_domain_id}
-                onChange={(e) => handleGlobalFieldChange("spyserp_domain_id", e.target.value)}
-                placeholder="30171708"
-                className="bg-slate-950 border-slate-800 text-slate-200"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Folder Name</label>
-              <Input
-                value={globalFields.spyserp_folder_name}
-                onChange={(e) => handleGlobalFieldChange("spyserp_folder_name", e.target.value)}
-                placeholder="UK"
-                className="bg-slate-950 border-slate-800 text-slate-200"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Value Metric ID</label>
-              <Input
-                value={globalFields.spyserp_valuemetric_id}
-                onChange={(e) => handleGlobalFieldChange("spyserp_valuemetric_id", e.target.value)}
-                placeholder="866344"
-                className="bg-slate-950 border-slate-800 text-slate-200"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-400">Engine ID</label>
-              <Input
-                value={globalFields.spyserp_engine_id}
-                onChange={(e) => handleGlobalFieldChange("spyserp_engine_id", e.target.value)}
-                placeholder="16335"
-                className="bg-slate-950 border-slate-800 text-slate-200"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleSaveClick} disabled={!globalDirty || isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Зберегти налаштування
+            <Button
+              variant="ghost"
+              onClick={() => setShowAnalyticsSettings(false)}
+              className="text-slate-400 hover:text-slate-100"
+            >
+              Назад
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-slate-200">SpySERP</h3>
+              <SpySerpMasterSetup
+                onComplete={(data) => {
+                  setGlobalFields((prev) => ({
+                    ...prev,
+                    spyserp_project_id: data.projectId,
+                    spyserp_domain_id: data.domainId,
+                    spyserp_engine_id: data.engineId,
+                    spyserp_valuemetric_id: data.valuemetricId,
+                  }));
+                  setGlobalDirty(true);
+                }}
+              />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-800">
+                <label className="space-y-2 text-xs font-semibold text-slate-400">
+                  Project ID
+                  <Input
+                    value={globalFields.spyserp_project_id}
+                    onChange={(e) => handleGlobalFieldChange("spyserp_project_id", e.target.value)}
+                    placeholder="142194"
+                  />
+                </label>
+                <label className="space-y-2 text-xs font-semibold text-slate-400">
+                  Domain ID
+                  <Input
+                    value={globalFields.spyserp_domain_id}
+                    onChange={(e) => handleGlobalFieldChange("spyserp_domain_id", e.target.value)}
+                    placeholder="30171708"
+                  />
+                </label>
+                <label className="space-y-2 text-xs font-semibold text-slate-400">
+                  Folder Name
+                  <Input
+                    value={globalFields.spyserp_folder_name}
+                    onChange={(e) => handleGlobalFieldChange("spyserp_folder_name", e.target.value)}
+                    placeholder="UK"
+                  />
+                </label>
+                <label className="space-y-2 text-xs font-semibold text-slate-400">
+                  Value Metric ID
+                  <Input
+                    value={globalFields.spyserp_valuemetric_id}
+                    onChange={(e) => handleGlobalFieldChange("spyserp_valuemetric_id", e.target.value)}
+                    placeholder="866344"
+                  />
+                </label>
+                <label className="space-y-2 text-xs font-semibold text-slate-400">
+                  Engine ID
+                  <Input
+                    value={globalFields.spyserp_engine_id}
+                    onChange={(e) => handleGlobalFieldChange("spyserp_engine_id", e.target.value)}
+                    placeholder="16335"
+                  />
+                </label>
+              </div>
+            </div>
 
-      <SeoPositions websiteUuid={site.uuid} />
-    </div>
-  );
+            <div className="space-y-4 pt-6 border-t border-slate-800">
+              <h3 className="text-sm font-medium text-slate-200">Umami Analytics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label className="space-y-2 text-xs font-semibold text-slate-400">
+                  Website ID
+                  <Input
+                    value={globalFields.umami_website_id}
+                    onChange={(e) => handleGlobalFieldChange("umami_website_id", e.target.value)}
+                    placeholder="e.g. 123e4567-e89b-12d3-a456-426614174000"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <Button onClick={handleSaveClick} disabled={!globalDirty || isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Зберегти налаштування
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="flex gap-2">
+          {globalFields.spyserp_project_id && (
+            <a
+              href={`https://spyserp.com/app/8556bee8/#project/${globalFields.spyserp_project_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-slate-800 text-slate-200 hover:bg-slate-700 h-9 px-4 py-2"
+            >
+              Відкрити SpySERP
+            </a>
+          )}
+          {globalFields.umami_website_id && (
+            <a
+              href={`${umamiUrl}/websites/${globalFields.umami_website_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-slate-800 text-slate-200 hover:bg-slate-700 h-9 px-4 py-2"
+            >
+              Відкрити Umami
+            </a>
+          )}
+        </div>
+
+        {globalFields.umami_website_id ? (
+          <UmamiStats websiteId={globalFields.umami_website_id} />
+        ) : (
+          <Card className="bg-slate-900 border-slate-800">
+            <CardContent className="flex flex-col items-center justify-center h-[300px] space-y-4">
+              <p className="text-slate-400">Аналітика не налаштована</p>
+              <Button onClick={() => setShowAnalyticsSettings(true)}>
+                Налаштувати
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        <SeoPositions websiteUuid={site.uuid} />
+      </div>
+    );
+  };
 
   const renderContent = () => {
     if (activeTab === "analytics") {
@@ -1900,12 +1989,20 @@ export function WebsiteDetailTabs({
         <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8 sm:px-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Website</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Вебсайт</p>
               <h1 className="text-3xl font-semibold text-white">{site.domain ?? "Невідомий домен"}</h1>
               <p className="text-sm text-slate-400">
-                Середовище: {environmentLabel} · Статус: {statusDisplay}
+                Статус: {statusDisplay}
               </p>
             </div>
+            {activeTab === "analytics" && !showAnalyticsSettings && (
+              <div className="space-y-2 sm:text-right">
+                <Button type="button" onClick={() => setShowAnalyticsSettings(true)} className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-200">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Налаштування
+                </Button>
+              </div>
+            )}
             {saveTarget && (
               <div className="space-y-2 sm:text-right">
                 <Button type="button" onClick={handleSaveClick} disabled={disableSave} className="w-full sm:w-auto">

@@ -42,6 +42,7 @@ export type WebsiteDetailRecord = {
   spyserp_folder_name: string | null;
   spyserp_valuemetric_id: number | null;
   spyserp_engine_id: number | null;
+  umami_website_id: string | null;
 };
 
 export type WebsiteHistoryField = {
