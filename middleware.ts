@@ -17,13 +17,27 @@ const buildRedirectUrl = (request: NextRequest, pathname: string) => {
 };
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Temporary fix for Turbopack static file serving issues
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/static") ||
+    pathname.endsWith(".svg") ||
+    pathname.endsWith(".ico") ||
+    pathname.endsWith(".json") ||
+    pathname.endsWith(".xml") ||
+    pathname.endsWith(".txt")
+  ) {
+    return NextResponse.next();
+  }
+
   const response = NextResponse.next();
   const supabase = createMiddlewareClient({ req: request, res: response });
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
   const publicRoute = isPublicPath(pathname);
 
   if (!user && !publicRoute) {
@@ -37,8 +51,8 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|favicon.svg|icon.svg|robots.txt|sitemap.xml|manifest.json).*)",
-  ],
-};
+// export const config = {
+//   matcher: [
+//     "/((?!_next/static|_next/image|favicon.ico|favicon.svg|icon.svg|robots.txt|sitemap.xml|manifest.json).*)",
+//   ],
+// };

@@ -190,12 +190,23 @@ export function AiAssistant({
     } catch (error) {
       console.error("Chat error:", error);
       let errorMessage = "Вибачте, сталася помилка. Спробуйте ще раз.";
+      let debugInfo = "";
+
+      if (error instanceof Error) {
+        debugInfo = `[${new Date().toISOString()}] ${error.name}: ${error.message}`;
+      } else {
+        debugInfo = `[${new Date().toISOString()}] ${String(error)}`;
+      }
+
       if (error instanceof TypeError && error.message === "Failed to fetch") {
         errorMessage = "Помилка з'єднання або тайм-аут. Можливо, контент сайту занадто великий або сервер довго відповідає.";
       }
+
+      const fullMessage = `${errorMessage}\n\n**Технічна інформація:**\n\`\`\`text\n${debugInfo}\n\`\`\``;
+
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: errorMessage },
+        { role: "assistant", content: fullMessage },
       ]);
     } finally {
       setIsLoading(false);
